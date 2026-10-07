@@ -1,7 +1,8 @@
 <script setup>
 // Reglas de uso: solo se muestran los parámetros con valor (NULL = no aplica,
-// decisión D-06). Las normas del ciclista citan su fuente; DEBEN pasar por el
-// agente verificador-normativo antes de la publicación en producción (plan 1g).
+// decisión D-06). Las normas del ciclista se verificaron el 2026-10-07
+// (docs/revisiones/2026-10-07_verificacion-normativa-politica-y-reglas.md);
+// queda pendiente el concepto de Jurídica sobre los arts. 94 y 95.
 import { computed } from 'vue'
 import sitio from '../../../sitio.config.js'
 import { useConsulta } from '../../composables/useConsulta.js'
@@ -71,15 +72,21 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
     </ul>
 
     <h2>Normas para circular en bicicleta</h2>
-    <p class="fuente">Código Nacional de Tránsito (Ley 769 de 2002, artículos 94 y 95), Ley 1811 de 2016 y Ley 2486 de 2025.</p>
+    <p class="fuente">
+      Código Nacional de Tránsito (Ley 769 de 2002, arts. 60 parágrafo 3, 94 y 95), con las modificaciones de la
+      Ley 1811 de 2016, la Ley 2486 de 2025 y la Ley 2635 de 2026.
+    </p>
+    <!-- PENDIENTE DE JURÍDICA (docs/revisiones/2026-10-07_verificacion-normativa-politica-y-reglas.md, B2 y B4):
+         el art. 94 dice «por la derecha, a no más de un metro de la acera» y «en grupo, uno detrás de otro»;
+         el art. 95 vigente (texto de la Ley 1811 de 2016) dice «transitar ocupando un carril» y «en grupo
+         deberán ocupar un carril». Hasta que Jurídica defina cómo comunicarlo, no se publica ninguna versión. -->
     <ul>
-      <li>Circula por la derecha, a no más de un metro de la acera u orilla, y nunca por los andenes.</li>
-      <li>Respeta las señales de tránsito y los semáforos como cualquier vehículo.</li>
-      <li>En grupo, circula uno detrás de otro.</li>
-      <li>No te sujetes de otros vehículos ni lleves a otra persona si la bicicleta no está hecha para eso.</li>
+      <li>Circula por la calzada: nunca por los andenes ni por los carriles exclusivos del transporte público.</li>
+      <li>Respeta las señales de tránsito, los semáforos y los límites de velocidad.</li>
+      <li>No te sujetes de otros vehículos ni lleves acompañante si la bicicleta no tiene un dispositivo diseñado para eso.</li>
       <li>Usa las señales con el brazo para indicar giros.</li>
-      <li>De noche (entre las 6:00 p. m. y las 6:00 a. m.) usa prenda reflectiva.</li>
-      <li>Los conductores deben adelantarte a una distancia mínima de 1,50 metros.</li>
+      <li>Usa prenda reflectiva entre las 6:00 p. m. y las 6:00 a. m., y siempre que haya poca visibilidad.</li>
+      <li>Los conductores de vehículos automotores deben adelantarte a una distancia mínima de 1,50 metros.</li>
     </ul>
 
     <h2>Si te roban la bicicleta o tienes un accidente</h2>
