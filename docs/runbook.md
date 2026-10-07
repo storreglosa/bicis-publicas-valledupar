@@ -1,67 +1,84 @@
 # Runbook — operación técnica
 
-## 1. Configuración inicial (Fase 0) — la hace Santiago
+## 1. Configuración inicial — la hace Santiago
 
-Las etiquetas exactas de los menús de Supabase y Cloudflare pueden variar; si algo no coincide, avisa y se
+Verificada contra la documentación oficial el 2026-10-07 (Supabase: *Connecting to Postgres*, *API keys*,
+*General configuration*; Cloudflare: *Turnstile dashboard*, *Testing*). Si algún menú no coincide, avisa y se
 ajusta esta guía.
 
-### 1.1 Supabase: organización y dos proyectos
-1. Crear la cuenta en supabase.com, idealmente con un **correo institucional** como dueño, y **activar 2FA**.
-2. Crear una organización (p. ej. `STTV Valledupar`) en el plan **Free**. Confirmar que no haya otro proyecto
-   Free activo: el plan permite dos y los usaremos ambos.
-3. Crear dos proyectos, los dos en la región **East US (North Virginia) / us-east-1** (decisión D-12):
-   - `bicis-valledupar-dev`: desarrollo y pruebas, solo datos ficticios.
-   - `bicis-valledupar-prod`: operación real.
-   Guarda la **contraseña de la base de datos** de cada uno en un gestor de contraseñas. No la pegues en el chat.
-4. En cada proyecto: Authentication → desactivar **"Allow new users to sign up"**. Solo el administrador crea cuentas.
-5. Anota de cada proyecto (Project Settings → API / API Keys):
-   - **Project URL** (`https://<ref>.supabase.co`) y el **ref**.
-   - **Publishable key** (`sb_publishable_…`): es pública, va en el frontend.
-   - La **secret key** (`sb_secret_…`) **no** se comparte ni se pega en el chat; se usará solo en los secretos
-     de las Edge Functions.
-6. En Connect → **Session pooler** (puerto 5432, IPv4): anota host y usuario (`postgres.<ref>`).
+**Qué se crea y cuándo**
+| Qué | Cuándo | Por qué |
+|---|---|---|
+| Proyecto Supabase **dev** | Ahora | Bloquea la demo y la vista del operador |
+| Proyecto Supabase **prod** | En el hito 1g (antes del piloto) | El plan Free pausa un proyecto tras 7 días sin uso |
+| Widget **Turnstile** real | En el hito 1e/1g | En desarrollo se usan las claves de prueba de Cloudflare, que funcionan en `localhost` |
+
+### 1.1 Supabase: cuenta, organización y proyecto dev
+1. Entra a https://supabase.com/dashboard y crea la cuenta (idealmente con el **correo institucional**).
+   Activa la verificación en dos pasos (MFA) en la configuración de tu cuenta.
+2. Crea una **organización** (p. ej. `STTV Valledupar`) en el plan **Free**.
+3. **New project**:
+   - Nombre: `bicis-valledupar-dev`
+   - Database password: usa **Generate a password** y guárdala en un gestor de contraseñas. No la pegues en el chat.
+   - Region: **East US (North Virginia)** (decisión D-12).
+   - Si aparece una sección de seguridad/Data API: deja **activa** la Data API y **sin** exponer tablas
+     automáticamente (las migraciones conceden permisos de forma explícita).
+   - Espera a que termine de aprovisionar (unos minutos).
+4. **Registro cerrado:** Authentication → configuración de *Sign In / Providers* → desactiva
+   **"Allow new users to sign up"**. Deja activo el proveedor **Email** (el personal entra con correo y clave).
+5. **Tu cuenta de administrador:** Authentication → Users → **Add user** → *Create new user*: tu correo y una
+   clave fuerte, con **Auto Confirm User** marcado. Esa será la primera cuenta administradora de la app.
+6. **Datos públicos** (Settings → **API Keys**, https://supabase.com/dashboard/project/_/settings/api-keys):
+   - la **publishable key** (`sb_publishable_…`). Si el proyecto no tiene ninguna, créala ahí mismo.
+   - La **secret key** (`sb_secret_…`) **no** se comparte ni se pega en el chat.
+   - La **Project URL** es `https://<ref>.supabase.co`; el **ref** es ese subdominio.
+7. **Conexión para psql:** botón **Connect** (arriba en el proyecto) → **Session pooler**. Anota el host
+   (`aws-<n>-us-east-1.pooler.supabase.com`, cópialo tal cual: el número no se puede adivinar) y el usuario
+   (`postgres.<ref>`). Puerto 5432.
 
 ### 1.2 Credenciales locales para psql / pg_dump / pruebas
-Fuera del repo, en tu carpeta personal. Claude no lee estos archivos; los usan `psql`, `pg_dump` y psycopg.
+Fuera del repo, en tu carpeta personal de WSL. Claude no lee estos archivos; los usan `psql`, `pg_dump` y psycopg.
 
-`~/.pg_service.conf`:
+```bash
+nano ~/.pg_service.conf
+```
 ```ini
 [bicis_dev]
-host=<host del session pooler de dev>
+host=<host del session pooler>
 port=5432
 dbname=postgres
-user=postgres.<ref de dev>
-sslmode=require
-
-[bicis_prod]
-host=<host del session pooler de prod>
-port=5432
-dbname=postgres
-user=postgres.<ref de prod>
+user=postgres.<ref>
 sslmode=require
 ```
 
-`~/.pgpass` (una línea por proyecto; luego `chmod 600 ~/.pgpass`):
-```
-<host dev>:5432:postgres:postgres.<ref dev>:<contraseña dev>
-<host prod>:5432:postgres:postgres.<ref prod>:<contraseña prod>
-```
-
-Prueba (con el entorno conda activo):
 ```bash
+nano ~/.pgpass
+```
+```
+<host del session pooler>:5432:postgres:postgres.<ref>:<contraseña de la base de datos>
+```
+Si la contraseña tiene `:` o `\`, escríbelos como `\:` y `\\`. Luego:
+
+```bash
+chmod 600 ~/.pgpass
 conda activate bicis
 psql "service=bicis_dev" -c "select version();"
 ```
+Debe responder `PostgreSQL 17…`.
 
-### 1.3 Cloudflare Turnstile (anti-spam de la preinscripción)
-1. Cuenta gratuita en Cloudflare → Turnstile → agregar un widget en modo **Managed**.
-2. Dominios: `storreglosa.github.io` y `localhost`.
-3. Anota la **site key** (es pública). La **secret key** irá a los secretos de la Edge Function `preinscribir`;
-   no la pegues en el chat.
+### 1.3 Cloudflare Turnstile (más adelante, hito 1e/1g)
+1. Cuenta gratuita en Cloudflare → **Turnstile** → **Add widget**.
+2. Nombre: `Bicis Públicas Valledupar`; hostname: **solo** `storreglosa.github.io` (Cloudflare recomienda que la
+   clave real no admita dominios locales); modo **Managed**; sin pre-clearance.
+3. **Create** → copia la **sitekey** (pública) y guarda la **secret key** (irá a los secretos de la Edge Function
+   `preinscribir`; no la pegues en el chat).
+4. En desarrollo se usan las claves de prueba de Cloudflare (sitekey `1x00000000000000000000AA`, secret
+   `1x0000000000000000000000000000000AA`: siempre pasan; funcionan en `localhost`).
 
 ### 1.4 Lo que me pasas cuando termines
-Solo datos públicos: el **ref** y la **Project URL** de dev y de prod, las dos **publishable keys** y la
-**site key** de Turnstile. Las contraseñas y las claves secretas se quedan en tus archivos o en el Dashboard.
+Solo datos públicos: el **ref**, la **Project URL** y la **publishable key** de dev; el **correo** de tu cuenta
+de administrador (para vincularla como administrador) y la confirmación de que el `psql` de 1.2 respondió.
+Las contraseñas y las claves secretas se quedan en tus archivos o en el Dashboard.
 
 ## 2. Migraciones
 (se completa al conectar dev: `scripts/migrar.sh dev|prod`)
