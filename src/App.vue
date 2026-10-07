@@ -2,11 +2,17 @@
 import sitio from '../sitio.config.js'
 
 const logo = `${import.meta.env.BASE_URL}marca/logo_sttv.png`
+// Versión de demostración conectada al proyecto de desarrollo (datos ficticios).
+const esDemo = import.meta.env.VITE_DEMO === '1'
 const anio = new Date().getFullYear()
 </script>
 
 <template>
   <a class="saltar" href="#contenido" @click.prevent="$refs.contenido.focus()">Saltar al contenido</a>
+
+  <p v-if="esDemo" class="demo" role="note">
+    <strong>DEMO — datos ficticios.</strong> Versión de prueba del sistema: no ingreses datos personales reales.
+  </p>
 
   <header class="cabecera">
     <div class="contenedor cabecera__fila">
@@ -49,6 +55,15 @@ const anio = new Date().getFullYear()
 </template>
 
 <style scoped>
+.demo {
+  margin: 0;
+  padding: var(--esp-2) var(--esp-4);
+  background: var(--aviso-fondo);
+  color: var(--tinta-1);
+  border-bottom: 2px solid var(--aviso);
+  font-size: var(--texto-s);
+  text-align: center;
+}
 .cabecera {
   background: var(--superficie);
   border-bottom: 1px solid var(--linea);

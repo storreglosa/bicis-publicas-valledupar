@@ -1,0 +1,70 @@
+# Construye y publica la página en GitHub Pages.
+#
+# Hoy publica la DEMO conectada al proyecto Supabase de desarrollo (datos ficticios).
+# Los valores vienen de las *variables* del repositorio (no son secretos: la URL y
+# la publishable key de Supabase y la sitekey de Turnstile son públicas por diseño):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_TURNSTILE_SITE_KEY, VITE_DEMO
+# Ninguna clave secreta pasa por aquí.
+#
+# Acciones fijadas por SHA (verificado el 2026-10-07):
+#   checkout v7.0.1, setup-node v7.0.0, configure-pages v6.0.0,
+#   upload-pages-artifact v5.0.0, deploy-pages v5.0.1
+name: Desplegar en Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  construir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0   # el escáner revisa todo el historial
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependencias
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Pruebas unitarias
+        run: npm test
+      - name: Construir
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
+          VITE_DEMO: ${{ vars.VITE_DEMO }}
+      - name: Verificar que no se publiquen datos personales ni secretos
+        run: |
+          python3 scripts/verificar_publicacion.py dist
+          python3 scripts/verificar_publicacion.py --historial
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9
+        with:
+          path: dist
+
+  publicar:
+    needs: construir
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

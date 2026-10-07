@@ -39,7 +39,13 @@ python -m pytest tests/bd -q             # migraciones + RLS + funciones contra 
 python -m pytest tests/test_contraste.py # contraste WCAG de tokens.css
 npm run dev                              # http://localhost:5173/bicis-publicas-valledupar/ (#/paleta solo en dev)
 npm run build
+scripts/migrar.sh dev [--aplicar]        # migraciones a Supabase (ver docs/runbook.md §2)
+python scripts/verificar_publicacion.py --historial   # ANTES de cada push (repo público)
+npx vite build --mode development --outDir dist-demo && npx vite preview --mode development --outDir dist-demo --port 4174
+node scripts/capturar.mjs <url> capturas/x.png "<selector>"   # captura esperando datos (Chromium en caché)
 ```
+- Cuidado: tras un corte de la máquina, `git fsck --full` antes de seguir (ver memoria cortes-wsl-corrompen-git).
+- Commits con el correo privado de GitHub (`git config user.email` local del repo); nunca el Gmail.
 - Las pruebas de BD crean `bicis_pruebas` (cada prueba se revierte) y `bicis_pruebas_aislada`
   (concurrencia, con commit) desde cero en cada corrida. `tests/bd/stub_supabase.sql` imita lo
   mínimo de Supabase (roles, `auth.uid()`, storage, publicación realtime); **nunca se aplica en Supabase**.
