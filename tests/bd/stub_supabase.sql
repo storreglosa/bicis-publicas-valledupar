@@ -28,6 +28,7 @@ create schema if not exists auth;
 create table if not exists auth.users (
   id uuid primary key default gen_random_uuid(),
   email text unique,
+  email_confirmed_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -94,3 +95,11 @@ end $$;
 
 -- Como en Supabase: los roles de la API pueden usar el esquema public.
 grant usage on schema public to anon, authenticated, service_role;
+
+-- Privilegios por defecto del esquema CLÁSICO de Supabase (script de inicialización
+-- de supabase/postgres): todo objeto nuevo en public queda con ALL para los roles de
+-- la API. Es el peor caso; los proyectos creados desde el 30-may-2026 ya no lo traen.
+-- Las migraciones deben cerrar esto por sí mismas (revisión de seguridad M-3, B-7).
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;

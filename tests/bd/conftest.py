@@ -132,7 +132,12 @@ def sembrar(cur, sufijo: str = "", base_bici: int = 1, n_bicis: int = 10) -> Dat
 # --- Sesión de pruebas con cambio de rol --------------------------------------
 
 class ErrorBD(Exception):
-    pass
+    """Error de negocio: código en el mensaje y el DETAIL de Postgres (debe ir vacío
+    cuando hay datos personales de por medio: revisión de seguridad A-1)."""
+
+    def __init__(self, codigo: str, detalle: str | None = None):
+        super().__init__(codigo)
+        self.detalle = detalle
 
 
 class Sesion:
@@ -176,21 +181,25 @@ class Sesion:
                     cur.execute(f"select * from public.{nombre}({args})", kw)
                     filas = cur.fetchall()
         except psycopg.errors.RaiseException as e:
-            raise ErrorBD(e.diag.message_primary) from None
+            raise ErrorBD(e.diag.message_primary, e.diag.message_detail) from None
         except psycopg.errors.InsufficientPrivilege as e:
             # 'no_autorizado' lo lanza la función (rol de la app); lo demás es Postgres
             # negando el EXECUTE o el acceso (permiso del rol de la API).
             mensaje = e.diag.message_primary or ""
-            raise ErrorBD(mensaje if mensaje == "no_autorizado" else "sin_permiso:" + mensaje) from None
+            raise ErrorBD(mensaje if mensaje == "no_autorizado" else "sin_permiso:" + mensaje,
+                          e.diag.message_detail) from None
         if len(filas) == 1 and len(filas[0]) == 1:
             return filas[0][0]
         return filas
 
     def error(self, nombre: str, **kw) -> str:
+        return str(self.excepcion(nombre, **kw))
+
+    def excepcion(self, nombre: str, **kw) -> ErrorBD:
         try:
             self.rpc(nombre, **kw)
         except ErrorBD as e:
-            return str(e)
+            return e
         raise AssertionError(f"{nombre} no falló")
 
     # Atajos de negocio ------------------------------------------------------
@@ -215,7 +224,10 @@ class Sesion:
         pid = self.uno("select id from public.personas where numero_documento = %s", (documento,))
         if validar_con:
             self.como(validar_con)
-            self.rpc("validar_persona", p_persona_id=pid)
+            # Un menor solo se valida con la autorización presencial de su acudiente (M-2).
+            presencial = {"politica_version": self.d.version_politica, "autoriza_tratamiento": True,
+                          "autoriza_foto": autoriza_foto, "menor_escuchado": True} if acudiente else None
+            self.rpc("validar_persona", p_persona_id=pid, p_autorizacion=presencial)
         return pid
 
     def subir_foto(self, prestamo_id: uuid.UUID, quien=None, extension: str = "webp") -> str:

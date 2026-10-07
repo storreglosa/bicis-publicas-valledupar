@@ -10,6 +10,8 @@ export const MENSAJES = {
   no_puede_degradarse: 'No puedes quitarte a ti mismo el rol de administrador ni desactivar tu cuenta.',
   sin_administradores: 'Debe quedar al menos un administrador activo.',
   usuario_no_existe: 'No hay ninguna cuenta con ese correo. Créala primero en Supabase (Authentication).',
+  usuario_no_confirmado: 'Esa cuenta no tiene el correo confirmado. Confírmala en Supabase (Authentication) antes de vincularla.',
+  demasiadas_busquedas: 'Has hecho demasiadas búsquedas en pocos minutos. Espera un momento e inténtalo de nuevo.',
   ya_vinculado: 'Esa cuenta ya está vinculada al personal.',
 
   // Datos de la persona
@@ -39,6 +41,7 @@ export const MENSAJES = {
   politica_inmutable: 'Una política publicada no se puede modificar; publica una versión nueva.',
   falta_autorizacion_vigente: 'Esta persona no ha autorizado la política de datos vigente. Registra la nueva autorización antes de prestar.',
   falta_autorizacion_foto: 'Esta persona no ha autorizado la foto de evidencia, que es obligatoria para prestar.',
+  falta_autorizacion_presencial: 'Para un menor de edad, su acudiente debe autorizar en persona, aquí en el punto, con su documento.',
 
   // Bicicletas y puntos
   bici_no_existe: 'No hay ninguna bicicleta con ese número.',
@@ -69,6 +72,7 @@ export const MENSAJES = {
   prestamo_no_existe: 'Ese préstamo no existe.',
   prestamo_no_activo: 'Ese préstamo ya no está activo.',
   motivo_insuficiente: 'Escribe un motivo más detallado.',
+  texto_demasiado_largo: 'El texto es demasiado largo. Resúmelo en menos de 500 caracteres.',
   falta_incidencia: 'Describe la novedad: tipo, gravedad y qué pasó.',
   incidencia_tipo_invalido: 'Elige el tipo de novedad.',
   incidencia_gravedad_invalida: 'Elige la gravedad de la novedad.',
@@ -77,6 +81,17 @@ export const MENSAJES = {
   // Administración
   parametro_fuera_de_rango: 'Ese valor está fuera del rango permitido para el parámetro.',
   registro_inmutable: 'Ese registro no se puede modificar ni borrar.',
+  sancion_inmutable: 'De una sanción solo se pueden cambiar el estado, la fecha final y el motivo de anulación.',
+  incidencia_inmutable: 'De una incidencia solo se pueden cambiar el estado y la resolución.',
+  tipo_punto_inmutable: 'El tipo de un punto (fijo, evento o taller) no se puede cambiar. Crea un punto nuevo.',
+}
+
+// Errores de Postgres que no lanza ninguna función, identificados por su código
+// SQLSTATE: concurrencia (40P01, 40001) y tiempo de espera (57014).
+const POR_CODIGO_SQL = {
+  '40P01': 'Otra persona estaba registrando una operación sobre las mismas bicis. Inténtalo de nuevo.',
+  '40001': 'Otra persona estaba registrando una operación sobre las mismas bicis. Inténtalo de nuevo.',
+  '57014': 'El servidor tardó demasiado en responder. Inténtalo de nuevo.',
 }
 
 const GENERICO = 'Ocurrió un error inesperado. Inténtalo de nuevo; si se repite, avisa al administrador con el código que aparece abajo.'
@@ -91,9 +106,15 @@ export function traducirError(error) {
   if (Object.hasOwn(MENSAJES, codigo)) {
     return { codigo, mensaje: MENSAJES[codigo] }
   }
+  const sqlstate = error && typeof error === 'object' && 'code' in error ? String(error.code) : null
+  if (sqlstate && Object.hasOwn(POR_CODIGO_SQL, sqlstate)) {
+    return { codigo: 'reintentar', mensaje: POR_CODIGO_SQL[sqlstate] }
+  }
   if (/failed to fetch|networkerror|load failed/i.test(codigo)) {
     return { codigo: 'sin_conexion', mensaje: 'No hay conexión con el servidor. Revisa los datos móviles e inténtalo de nuevo.' }
   }
-  console.error('Error no traducido:', error)
+  // Solo código y mensaje: el campo `details` de Postgres puede traer una fila con
+  // datos personales y no debe quedar en la consola del dispositivo.
+  console.error('Error no traducido:', { code: sqlstate, message: codigo })
   return { codigo, mensaje: GENERICO }
 }

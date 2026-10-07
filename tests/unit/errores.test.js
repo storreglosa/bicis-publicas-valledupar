@@ -30,6 +30,17 @@ describe('errores', () => {
     })
   })
 
+  it('traduce interbloqueos y tiempos de espera por su SQLSTATE', () => {
+    expect(traducirError({ code: '40P01', message: 'deadlock detected' }).codigo).toBe('reintentar')
+    expect(traducirError({ code: '57014', message: 'canceling statement due to statement timeout' }).codigo).toBe('reintentar')
+  })
+
+  it('nunca registra el detalle del error (puede traer datos personales)', () => {
+    const consola = vi.spyOn(console, 'error').mockImplementation(() => {})
+    traducirError({ code: '23514', message: 'algo', details: 'Failing row contains (00123456, 3001234567)' })
+    expect(JSON.stringify(consola.mock.calls)).not.toContain('00123456')
+  })
+
   it('reconoce la falta de conexión', () => {
     expect(traducirError(new TypeError('Failed to fetch')).codigo).toBe('sin_conexion')
   })

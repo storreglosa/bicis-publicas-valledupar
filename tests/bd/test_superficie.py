@@ -6,12 +6,16 @@ falla. Agregar algo a una lista blanca exige justificarlo en la revisión.
 
 PRIVILEGIOS = ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER")
 
-ANON_TABLAS = {
-    ("disponibilidad_puntos", "SELECT"),
-    ("eventos", "SELECT"),
-    ("parametros", "SELECT"),
-    ("politicas_tratamiento", "SELECT"),
-    ("tipos_documento", "SELECT"),
+# Permisos de anon a nivel de TABLA (todas las columnas).
+ANON_TABLAS = {("disponibilidad_puntos", "SELECT")}
+
+# Permisos de anon a nivel de COLUMNA: nada de UUID del personal ni columnas internas (I-2).
+ANON_COLUMNAS = {
+    "tipos_documento": {"codigo", "nombre", "implica_menor", "patron", "orden", "activo"},
+    "politicas_tratamiento": {"id", "version", "vigente_desde", "texto_md", "texto_autorizacion",
+                              "texto_autorizacion_foto", "sha256", "vigente", "publicada_en"},
+    "parametros": {"clave", "categoria", "descripcion", "tipo", "unidad", "minimo", "maximo", "publico", "orden", "valor"},
+    "eventos": {"id", "nombre", "descripcion", "lugar_texto", "inicia_en", "termina_en", "estado", "publicado"},
 }
 
 AUTH_FUNCIONES = {
@@ -44,6 +48,47 @@ def _funciones(bd, rol, esquema="public"):
 
 def test_anon_solo_lee_la_lista_blanca(bd):
     assert _privilegios_tabla(bd, "anon") == ANON_TABLAS
+
+
+def test_anon_lee_solo_columnas_publicas(bd):
+    filas = bd.sql(
+        """select c.relname, a.attname
+             from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public' and c.relkind in ('r', 'v') and a.attnum > 0 and not a.attisdropped
+              and c.relname <> 'disponibilidad_puntos'
+              and has_column_privilege('anon', c.oid, a.attnum, 'SELECT')""")
+    columnas = {}
+    for tabla, columna in filas:
+        columnas.setdefault(tabla, set()).add(columna)
+    assert columnas == ANON_COLUMNAS
+
+
+def test_nadie_de_la_api_escribe_columnas_sueltas_salvo_el_admin_autenticado(bd):
+    for rol in ("anon", "service_role"):
+        escribibles = bd.sql(
+            """select c.relname, a.attname, p.priv
+                 from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace
+                 cross join unnest(array['INSERT', 'UPDATE']) p(priv)
+                where n.nspname = 'public' and a.attnum > 0 and not a.attisdropped
+                  and has_column_privilege(%s, c.oid, a.attnum, p.priv)""", (rol,))
+        assert escribibles == [], (rol, escribibles)
+
+
+def test_service_role_solo_ejecuta_preinscribir_y_no_toca_tablas(bd):
+    assert _funciones(bd, "service_role") == {"preinscribir"}
+    assert _funciones(bd, "service_role", "privado") == set()
+    assert _privilegios_tabla(bd, "service_role") == set()
+
+
+def test_public_no_ejecuta_ninguna_funcion_propia(bd):
+    """El EXECUTE que Postgres concede a PUBLIC por defecto se revoca globalmente en la
+    migración 1 (revisión de seguridad M-3 y B-7)."""
+    abiertas = bd.sql(
+        """select n.nspname || '.' || p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+            where n.nspname in ('public', 'privado')
+              and exists (select 1 from aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                           where a.grantee = 0 and a.privilege_type = 'EXECUTE')""")
+    assert abiertas == []
 
 
 def test_anon_no_ejecuta_ninguna_funcion(bd):

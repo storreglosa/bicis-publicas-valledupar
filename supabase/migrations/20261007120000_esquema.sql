@@ -7,6 +7,17 @@
 --   * Lo único que ve el público es disponibilidad_puntos (sin datos personales).
 --   * Coordenadas en EPSG:4326 con 6 decimales.
 
+-- 0. Endurecimiento de privilegios ANTES de crear cualquier objeto (revisión de
+--    seguridad M-3 y B-7). Así ninguna función o tabla nace expuesta, aunque una
+--    migración posterior falle a mitad de un despliegue.
+--    * Postgres concede EXECUTE a PUBLIC sobre toda función nueva: es un privilegio
+--      global y solo se revoca de forma global.
+--    * El esquema clásico de Supabase concede ALL en public a los roles de la API.
+alter default privileges revoke execute on functions from public;
+alter default privileges in schema public revoke all on tables from anon, authenticated, service_role;
+alter default privileges in schema public revoke all on sequences from anon, authenticated, service_role;
+alter default privileges in schema public revoke all on functions from anon, authenticated, service_role;
+
 create schema if not exists privado;
 comment on schema privado is 'Funciones auxiliares y tablas internas. NO se expone por la API.';
 
@@ -85,6 +96,8 @@ create table public.acudientes (
   apellidos text not null check (length(btrim(apellidos)) between 1 and 80),
   telefono text not null check (telefono ~ '^\+?[0-9]{7,15}$'),
   correo text check (correo is null or (correo = lower(correo) and correo ~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$')),
+  -- Sal propia para las huellas de la auditoría (ver privado.auditar).
+  sal_huella text not null default encode(sha256(convert_to(gen_random_uuid()::text || clock_timestamp()::text, 'UTF8')), 'hex'),
   creado_en timestamptz not null default now(),
   unique (tipo_documento, numero_documento)
 );
@@ -109,6 +122,9 @@ create table public.personas (
   validada_en timestamptz,
   validada_por uuid references public.personal (id),
   id_operacion uuid not null unique,  -- idempotencia de la inscripción
+  -- Sal propia para las huellas de la auditoría. Al anonimizar se reemplaza: las
+  -- huellas ya escritas en la auditoría inmutable quedan sin vínculo con la persona.
+  sal_huella text not null default encode(sha256(convert_to(gen_random_uuid()::text || clock_timestamp()::text, 'UTF8')), 'hex'),
   creada_en timestamptz not null default now(),
   actualizada_en timestamptz not null default now(),
   unique (tipo_documento, numero_documento),
@@ -159,8 +175,8 @@ create unique index una_autorizacion_vigente
 create table public.eventos (
   id uuid primary key default gen_random_uuid(),
   nombre text not null check (length(btrim(nombre)) between 3 and 120),
-  descripcion text,
-  lugar_texto text,
+  descripcion text check (length(descripcion) <= 2000),
+  lugar_texto text check (length(lugar_texto) <= 200),
   inicia_en timestamptz not null,
   termina_en timestamptz not null,
   estado public.estado_evento not null default 'planeado',
@@ -180,10 +196,10 @@ create table public.puntos (
   -- EPSG:4326. CHECK con un recuadro amplio del municipio de Valledupar.
   latitud numeric(8, 6) not null check (latitud between 9.7 and 11.0),
   longitud numeric(9, 6) not null check (longitud between -74.0 and -72.8),
-  direccion text,
-  horario_texto text,
+  direccion text check (length(direccion) <= 200),
+  horario_texto text check (length(horario_texto) <= 200),
   capacidad smallint check (capacidad is null or capacidad > 0),
-  notas_internas text,
+  notas_internas text check (length(notas_internas) <= 1000),
   creado_en timestamptz not null default now(),
   check ((tipo = 'evento') = (evento_id is not null))
 );
@@ -205,7 +221,7 @@ create table public.bicicletas (
   talla text,
   numero_serie text unique,
   fecha_ingreso date,
-  nota_operativa text,
+  nota_operativa text check (length(nota_operativa) <= 500),
   ultimo_movimiento_en timestamptz not null default now(),
   check (disponibilidad <> 'prestada' or (punto_actual_id is null and condicion = 'operativa')),
   check (disponibilidad = 'prestada' or condicion in ('extraviada', 'baja') or punto_actual_id is not null),
@@ -253,17 +269,17 @@ create table public.prestamos (
   foto_estado public.estado_foto not null default 'almacenada',
   foto_eliminada_en timestamptz,
   foto_retener boolean not null default false,
-  observaciones_salida text,
+  observaciones_salida text check (length(observaciones_salida) <= 500),
   devolucion_id_operacion uuid unique,
   punto_devolucion_id uuid references public.puntos (id),
   operador_devolucion_id uuid references public.personal (id),
   devuelto_en timestamptz,
   con_novedad boolean,
   devolucion_forzada boolean not null default false,
-  observaciones_devolucion text,
+  observaciones_devolucion text check (length(observaciones_devolucion) <= 500),
   cerrado_en timestamptz,
   cerrado_por uuid references public.personal (id),
-  motivo_cierre text,
+  motivo_cierre text check (length(motivo_cierre) <= 500),
   check (estado <> 'activo' or (devuelto_en is null and punto_devolucion_id is null and cerrado_en is null)),
   check (estado <> 'finalizado' or (devuelto_en is not null and punto_devolucion_id is not null
          and operador_devolucion_id is not null and con_novedad is not null and devolucion_id_operacion is not null)),
@@ -286,7 +302,7 @@ create table public.incidencias (
   prestamo_id uuid references public.prestamos (id),
   tipo public.tipo_incidencia not null,
   gravedad public.gravedad not null,
-  descripcion text not null check (length(btrim(descripcion)) >= 5),
+  descripcion text not null check (length(btrim(descripcion)) between 5 and 1000),
   deja_fuera_de_servicio boolean not null default false,
   estado public.estado_incidencia not null default 'abierta',
   reportada_por uuid not null references public.personal (id),
@@ -294,7 +310,7 @@ create table public.incidencias (
   foto_ruta text,
   cerrada_por uuid references public.personal (id),
   cerrada_en timestamptz,
-  resolucion text,
+  resolucion text check (length(resolucion) <= 1000),
   check ((estado = 'cerrada') = (cerrada_en is not null and resolucion is not null))
 );
 create index incidencias_abiertas_bici on public.incidencias (bicicleta_id) where estado <> 'cerrada';
@@ -305,7 +321,7 @@ create table public.sanciones (
   prestamo_id uuid references public.prestamos (id),
   incidencia_id uuid references public.incidencias (id),
   tipo public.tipo_sancion not null,
-  motivo text not null check (length(btrim(motivo)) >= 10),
+  motivo text not null check (length(btrim(motivo)) between 10 and 500),
   desde date not null default current_date,
   hasta date,
   estado public.estado_sancion not null default 'vigente',
@@ -313,7 +329,7 @@ create table public.sanciones (
   impuesta_en timestamptz not null default now(),
   anulada_por uuid references public.personal (id),
   anulada_en timestamptz,
-  motivo_anulacion text,
+  motivo_anulacion text check (length(motivo_anulacion) <= 500),
   check (tipo <> 'suspension' or hasta is not null),   -- nada de suspensiones indefinidas implícitas
   check (hasta is null or hasta >= desde),
   check ((estado = 'anulada') = (anulada_en is not null))
@@ -358,6 +374,7 @@ insert into public.parametros (clave, categoria, descripcion, tipo, unidad, mini
   ('alertas.bici_inactiva_dias', 'Alertas', 'Alertar bicicletas sin movimiento durante estos días', 'entero', 'días', 1, 90, false, 20, null),
   ('retencion.fotos_dias', 'Retención de datos', 'Días que se conserva la foto de un préstamo devuelto sin novedad', 'entero', 'días', 1, 365, true, 10, null),
   ('retencion.preinscripcion_sin_validar_dias', 'Retención de datos', 'Días tras los que se elimina una preinscripción nunca validada', 'entero', 'días', 7, 730, true, 20, null),
+  ('retencion.bitacora_meses', 'Retención de datos', 'Meses que se conserva la bitácora de consultas de datos personales', 'entero', 'meses', 6, 60, true, 40, null),
   ('retencion.anonimizar_inactivos_meses', 'Retención de datos', 'Meses sin préstamos tras los que se anonimiza a una persona', 'entero', 'meses', 6, 120, true, 30, null),
   ('evidencia.foto_persona_obligatoria', 'Evidencia', 'Sí: la foto del préstamo muestra a la persona con la bici. No: solo la bici con su sticker', 'booleano', null, null, null, true, 10, 'true');
 
@@ -385,7 +402,27 @@ create table public.bitacora_consultas (
   huella_documento text,
   encontrada boolean,
   con_datos_personales boolean not null default false,
-  motivo text,
+  motivo text check (length(motivo) <= 500),
   detalle jsonb
 );
 create index bitacora_actor_fecha on public.bitacora_consultas (actor_id, en desc);
+
+-- RLS activa desde que las tablas existen (revisión de seguridad M-3). Sin políticas,
+-- ningún rol de la API ve nada; las políticas y los permisos se conceden en
+-- 20261007120400_permisos.sql.
+alter table public.tipos_documento       enable row level security;
+alter table public.personal              enable row level security;
+alter table public.acudientes            enable row level security;
+alter table public.personas              enable row level security;
+alter table public.politicas_tratamiento enable row level security;
+alter table public.autorizaciones_datos  enable row level security;
+alter table public.eventos               enable row level security;
+alter table public.puntos                enable row level security;
+alter table public.bicicletas            enable row level security;
+alter table public.disponibilidad_puntos enable row level security;
+alter table public.prestamos             enable row level security;
+alter table public.incidencias           enable row level security;
+alter table public.sanciones             enable row level security;
+alter table public.parametros            enable row level security;
+alter table public.auditoria             enable row level security;
+alter table public.bitacora_consultas    enable row level security;

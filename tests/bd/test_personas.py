@@ -221,3 +221,110 @@ def test_auditoria_es_inmutable(bd):
     bd.como("dueno")
     with pytest.raises(Exception, match="registro_inmutable"):
         bd.sql("delete from public.auditoria")
+
+
+# --- Correcciones de la revisión de seguridad 1a ---------------------------------
+
+ESPACIOS_RAROS = ["\t", "\n", "\u00a0", "\u2003", "\u3000", "   ", "\t\u2003 "]
+
+
+@pytest.mark.parametrize("valor", ESPACIOS_RAROS)
+@pytest.mark.parametrize("campo", ["nombres", "apellidos"])
+def test_a1_espacios_raros_no_filtran_la_fila_en_el_detail(bd, campo, valor):
+    pid = bd.persona("00100001")
+    bd.como(bd.d.op1)
+    e = bd.excepcion("validar_persona", p_persona_id=pid, p_correcciones={campo: valor})
+    assert str(e) == "nombre_invalido" and e.detalle is None
+    bd.como("servicio")
+    e = bd.excepcion("preinscribir", p=_solicitud(bd, documento="00100009", **{campo: valor}))
+    assert str(e) == "nombre_invalido" and e.detalle is None
+
+
+def test_a1_ningun_error_de_inscripcion_trae_detail(bd):
+    casos = [{"telefono": "1"}, {"correo": "x@"}, {"edad": "200"}, {"nombres": "a" * 81},
+             {"acudiente": {"tipo_documento": "CC", "numero_documento": "00900001", "nombres": "\t",
+                            "apellidos": "X", "telefono": "3000000009", "parentesco": "madre"},
+              "tipo_documento": "TI", "numero_documento": "00200001", "edad": "12"}]
+    bd.como(bd.d.op1)
+    for caso in casos:
+        e = bd.excepcion("registrar_persona_en_punto", p=_solicitud(bd, **caso))
+        assert e.detalle is None, (caso, e.detalle)
+
+
+def test_m1_ya_inscrito_en_el_punto_no_devuelve_id_y_queda_en_bitacora(bd):
+    bd.persona("00100001")
+    bd.como(bd.d.op1)
+    assert bd.rpc("registrar_persona_en_punto", p=_solicitud(bd)) == {"resultado": "ya_inscrito"}
+    bd.como("dueno")
+    assert bd.sql("select tipo, encontrada from public.bitacora_consultas where actor_id = %s", (bd.d.op1,)) == \
+        [("buscar_persona", True)]
+
+
+def test_m1_validar_y_autorizar_quedan_en_bitacora_como_ver_persona(bd):
+    pid = bd.persona("00100001")
+    bd.como(bd.d.op1)
+    bd.rpc("validar_persona", p_persona_id=pid)
+    bd.rpc("registrar_autorizacion", p_persona_id=pid, p_autorizacion={
+        "politica_version": "0.1", "autoriza_tratamiento": True, "autoriza_foto": True})
+    bd.como("dueno")
+    assert bd.sql("select tipo from public.bitacora_consultas where actor_id = %s order by id", (bd.d.op1,)) == \
+        [("ver_persona",), ("ver_persona",)]
+
+
+def test_m4_la_sal_no_llega_a_la_auditoria_y_cambiarla_desvincula_las_huellas(bd):
+    pid = bd.persona("00100001")
+    bd.como("dueno")
+    despues = bd.uno("select despues from public.auditoria where tabla = 'personas' and operacion = 'INSERT'")
+    assert "sal_huella" not in despues
+    huella_auditada = despues["numero_documento"].removeprefix("huella:")
+    assert bd.uno("select privado.huella(numero_documento, sal_huella) from public.personas where id = %s",
+                  (pid,)) == huella_auditada
+    bd.sql("update public.personas set sal_huella = 'sal-nueva-tras-anonimizar' where id = %s", (pid,))
+    assert bd.uno("select privado.huella(numero_documento, sal_huella) from public.personas where id = %s",
+                  (pid,)) != huella_auditada
+    assert "sal-nueva" not in str(bd.sql("select antes, despues from public.auditoria"))
+
+
+def test_m4_la_bitacora_no_guarda_huella_de_documentos_no_inscritos(bd):
+    bd.como(bd.d.op1)
+    assert bd.rpc("buscar_persona", p_tipo="CC", p_numero="00999999") is None
+    bd.como("dueno")
+    assert bd.sql("select huella_documento, encontrada from public.bitacora_consultas") == [(None, False)]
+
+
+def test_b6_consentimiento_solo_con_booleano_true(bd):
+    p = _solicitud(bd)
+    p["autorizacion"]["autoriza_tratamiento"] = "yes"
+    bd.como("servicio")
+    assert bd.error("preinscribir", p=p) == "datos_invalidos"
+
+
+def test_b6_id_de_autorizacion_de_otra_persona_no_se_reutiliza_en_silencio(bd):
+    a = _solicitud(bd, documento="00100001")
+    bd.como(bd.d.op1)
+    bd.rpc("registrar_persona_en_punto", p=a)
+    b = _solicitud(bd, documento="00100002")
+    b["autorizacion"]["id"] = a["autorizacion"]["id"]
+    assert bd.error("registrar_persona_en_punto", p=b) == "id_operacion_reutilizado"
+
+
+def test_b9_solo_se_vinculan_cuentas_con_correo_confirmado(bd):
+    bd.como("dueno")
+    bd.sql("insert into auth.users (email) values ('nuevo@prueba.invalid')")
+    bd.como(bd.d.admin)
+    assert bd.error("vincular_personal", p_correo="nuevo@prueba.invalid", p_nombre="Operador Nuevo",
+                    p_rol="operador") == "usuario_no_confirmado"
+    bd.como("dueno")
+    bd.sql("update auth.users set email_confirmed_at = now() where email = 'nuevo@prueba.invalid'")
+    bd.como(bd.d.admin)
+    assert bd.rpc("vincular_personal", p_correo="nuevo@prueba.invalid", p_nombre="Operador Nuevo", p_rol="operador")
+
+
+def test_b10_limite_de_busquedas_por_operador(bd):
+    bd.como("dueno")
+    bd.sql("""insert into public.bitacora_consultas (actor_id, tipo, encontrada)
+              select %s, 'buscar_persona', false from generate_series(1, 120)""", (bd.d.op1,))
+    bd.como(bd.d.op1)
+    assert bd.error("buscar_persona", p_tipo="CC", p_numero="00100001") == "demasiadas_busquedas"
+    bd.como(bd.d.op2)                                    # otro operador no queda bloqueado
+    assert bd.rpc("buscar_persona", p_tipo="CC", p_numero="00100001") is None

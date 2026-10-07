@@ -104,12 +104,23 @@ begin
   return array[v_tipo.codigo, v_numero];
 end $$;
 
+-- Espacios en blanco de cualquier tipo: los de la clase POSIX más los Unicode que
+-- algunas configuraciones regionales no incluyen (U+00A0, U+2000-U+200B, U+3000...).
+create function privado.espacios(p_valor text) returns text
+language sql immutable set search_path = '' as $$
+  select btrim(regexp_replace(coalesce(p_valor, ''),
+    '[[:space:]\u00a0\u1680\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]+', ' ', 'g'))
+$$;
+
+-- Se normaliza ANTES de medir, con la misma regla del CHECK de la tabla. Si la
+-- función aceptara algo que el CHECK rechaza, el error de Postgres traería en su
+-- DETAIL la fila completa (revisión de seguridad A-1).
 create function privado.limpiar_nombre(p_valor text) returns text
 language plpgsql immutable set search_path = '' as $$
 declare
-  v text := regexp_replace(btrim(coalesce(p_valor, '')), '\s+', ' ', 'g');
+  v text := privado.espacios(p_valor);
 begin
-  if length(v) < 1 or length(v) > 80 or v ~ '[0-9<>{}@]' then
+  if length(v) < 1 or length(v) > 80 or v ~ '[0-9<>{}@[:cntrl:]]' then
     raise exception using message = 'nombre_invalido';
   end if;
   return v;
@@ -155,6 +166,54 @@ begin
   return p_valor::public.sexo_genero;
 end $$;
 
+create function privado.texto_libre(p_valor text, p_maximo integer default 500) returns text
+language plpgsql immutable set search_path = '' as $$
+declare
+  v text := nullif(privado.espacios(p_valor), '');
+begin
+  if length(v) > p_maximo then
+    raise exception using message = 'texto_demasiado_largo';
+  end if;
+  return v;
+end $$;
+
+create function privado.motivo(p_valor text, p_minimo integer) returns text
+language plpgsql immutable set search_path = '' as $$
+declare
+  v text := privado.texto_libre(p_valor, 500);
+begin
+  if coalesce(length(v), 0) < p_minimo then
+    raise exception using message = 'motivo_insuficiente';
+  end if;
+  return v;
+end $$;
+
+-- Un consentimiento solo vale si es el booleano true, no 'yes', 'on' ni '1'.
+create function privado.booleano(p jsonb, p_clave text) returns boolean
+language plpgsql immutable set search_path = '' as $$
+begin
+  if p is null or not (p ? p_clave) or jsonb_typeof(p -> p_clave) = 'null' then
+    return null;
+  end if;
+  if jsonb_typeof(p -> p_clave) <> 'boolean' then
+    raise exception using message = 'datos_invalidos';
+  end if;
+  return (p -> p_clave)::boolean;
+end $$;
+
+-- Toda lectura de datos personales por el personal queda en la bitácora. La
+-- huella del documento usa la sal de la persona (se pierde al anonimizarla); de
+-- un documento NO inscrito no se guarda nada más que el intento (M-1, M-4).
+create function privado.registrar_consulta(p_tipo text, p_persona uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.bitacora_consultas (actor_id, tipo, huella_documento, encontrada, con_datos_personales)
+  select auth.uid(), p_tipo,
+         (select privado.huella(per.tipo_documento || ':' || per.numero_documento, per.sal_huella)
+            from public.personas per where per.id = p_persona),
+         p_persona is not null, p_persona is not null;
+end $$;
+
 -- Disponibilidad que corresponde a una bici según su condición y su punto.
 create function privado.disponibilidad_para(p_condicion public.condicion_bici, p_punto uuid)
 returns public.disponibilidad_bici
@@ -182,6 +241,7 @@ declare
   v_pol record;
   v_es_menor boolean;
   v_id uuid;
+  v_dueno uuid;
 begin
   if p_aut is null or jsonb_typeof(p_aut) <> 'object' then
     raise exception using message = 'falta_autorizacion';
@@ -189,7 +249,7 @@ begin
 
   select per.*, t.implica_menor into v_per
     from public.personas per join public.tipos_documento t on t.codigo = per.tipo_documento
-   where per.id = p_persona;
+   where per.id = p_persona and per.estado <> 'anonimizada';
   if not found then
     raise exception using message = 'persona_no_existe';
   end if;
@@ -202,21 +262,25 @@ begin
   if coalesce(p_aut ->> 'politica_version', '') <> v_pol.version then
     raise exception using message = 'politica_desactualizada';
   end if;
-  if coalesce((p_aut ->> 'autoriza_tratamiento')::boolean, false) is not true then
+  if privado.booleano(p_aut, 'autoriza_tratamiento') is not true then
     raise exception using message = 'falta_autorizacion';
   end if;
   if v_es_menor then
     if v_per.acudiente_id is null then
       raise exception using message = 'falta_acudiente';
     end if;
-    if coalesce((p_aut ->> 'menor_escuchado')::boolean, false) is not true then
+    if privado.booleano(p_aut, 'menor_escuchado') is not true then
       raise exception using message = 'falta_menor_escuchado';
     end if;
   end if;
 
   v_id := coalesce(privado.a_uuid(nullif(p_aut ->> 'id', ''), 'id_operacion_invalido'), gen_random_uuid());
-  if exists (select 1 from public.autorizaciones_datos a where a.id = v_id) then
-    return v_id;  -- reintento de la misma operación
+  select a.persona_id into v_dueno from public.autorizaciones_datos a where a.id = v_id;
+  if found then
+    if v_dueno = p_persona then
+      return v_id;  -- reintento de la misma operación
+    end if;
+    raise exception using message = 'id_operacion_reutilizado';
   end if;
 
   -- Una nueva autorización sobre la misma política reemplaza a la anterior.
@@ -233,7 +297,7 @@ begin
      case when v_es_menor then v_per.acudiente_id end,
      case when v_es_menor then true end,
      true,
-     coalesce((p_aut ->> 'autoriza_foto')::boolean, false),
+     coalesce(privado.booleano(p_aut, 'autoriza_foto'), false),
      p_canal,
      case when p_canal = 'punto' then p_operador end);
   return v_id;
@@ -280,7 +344,12 @@ begin
   select per.id into v_existente from public.personas per
    where per.tipo_documento = v_doc[1] and per.numero_documento = v_doc[2];
   if found then
-    return jsonb_build_object('resultado', 'ya_inscrito', 'persona_id', v_existente);
+    -- No se devuelve el id ni se modifica nada. En el punto, la respuesta revela
+    -- que la persona existe: queda en la bitácora como una búsqueda (M-1).
+    if p_canal = 'punto' then
+      perform privado.registrar_consulta('buscar_persona', v_existente);
+    end if;
+    return jsonb_build_object('resultado', 'ya_inscrito');
   end if;
 
   select * into v_tipo from public.tipos_documento t where t.codigo = v_doc[1];
@@ -312,14 +381,26 @@ begin
     if v_parentesco is null or v_parentesco not in ('madre', 'padre', 'representante_legal') then
       raise exception using message = 'parentesco_invalido';
     end if;
+    -- Un acudiente ya registrado se vincula por su documento. Que de verdad sea
+    -- él quien autoriza se comprueba en persona: un menor no presta sin una
+    -- autorización registrada en un punto (M-2).
     select a.id into v_acu_id from public.acudientes a
      where a.tipo_documento = v_acu_doc[1] and a.numero_documento = v_acu_doc[2];
     if not found then
-      insert into public.acudientes (tipo_documento, numero_documento, nombres, apellidos, telefono, correo)
-      values (v_acu_doc[1], v_acu_doc[2],
-              privado.limpiar_nombre(v_acu ->> 'nombres'), privado.limpiar_nombre(v_acu ->> 'apellidos'),
-              privado.limpiar_telefono(v_acu ->> 'telefono'), privado.limpiar_correo(v_acu ->> 'correo'))
-      returning id into v_acu_id;
+      begin
+        insert into public.acudientes (tipo_documento, numero_documento, nombres, apellidos, telefono, correo)
+        values (v_acu_doc[1], v_acu_doc[2],
+                privado.limpiar_nombre(v_acu ->> 'nombres'), privado.limpiar_nombre(v_acu ->> 'apellidos'),
+                privado.limpiar_telefono(v_acu ->> 'telefono'), privado.limpiar_correo(v_acu ->> 'correo'))
+        returning id into v_acu_id;
+      exception
+        when unique_violation then
+          select a.id into v_acu_id from public.acudientes a
+           where a.tipo_documento = v_acu_doc[1] and a.numero_documento = v_acu_doc[2];
+        when check_violation or not_null_violation then
+          -- Se relanza SIN el DETAIL de Postgres, que traería la fila completa (A-1).
+          raise exception using message = 'datos_invalidos';
+      end;
     end if;
   end if;
 
@@ -336,11 +417,12 @@ begin
        case when p_canal = 'punto' then p_operador end,
        v_id_op)
     returning id into v_persona;
-  exception when unique_violation then
-    -- Otra solicitud inscribió el mismo documento al mismo tiempo.
-    select per.id into v_existente from public.personas per
-     where per.tipo_documento = v_doc[1] and per.numero_documento = v_doc[2];
-    return jsonb_build_object('resultado', 'ya_inscrito', 'persona_id', v_existente);
+  exception
+    when unique_violation then
+      -- Otra solicitud inscribió el mismo documento al mismo tiempo.
+      return jsonb_build_object('resultado', 'ya_inscrito');
+    when check_violation or not_null_violation or foreign_key_violation then
+      raise exception using message = 'datos_invalidos';  -- sin DETAIL (A-1)
   end;
 
   perform privado.crear_autorizacion(v_persona, p -> 'autorizacion', p_canal, p_operador);
@@ -454,11 +536,16 @@ declare
   v_id uuid;
 begin
   perform privado.exigir_rol('operador', 'administrador');
+  -- Límite por persona del personal: una cuenta comprometida no puede recorrer
+  -- documentos en masa (B-10). 120 búsquedas en 10 minutos sobra para un punto.
+  if (select count(*) from public.bitacora_consultas b
+       where b.actor_id = auth.uid() and b.tipo = 'buscar_persona' and b.en > now() - interval '10 minutes') >= 120 then
+    raise exception using message = 'demasiadas_busquedas';
+  end if;
   v_doc := privado.limpiar_documento(p_tipo, p_numero);
   select per.id into v_id from public.personas per
    where per.tipo_documento = v_doc[1] and per.numero_documento = v_doc[2] and per.estado <> 'anonimizada';
-  insert into public.bitacora_consultas (actor_id, tipo, huella_documento, encontrada, con_datos_personales)
-  values (auth.uid(), 'buscar_persona', privado.huella(v_doc[1] || ':' || v_doc[2]), v_id is not null, v_id is not null);
+  perform privado.registrar_consulta('buscar_persona', v_id);
   if v_id is null then
     return null;
   end if;
@@ -474,6 +561,7 @@ declare
   v public.personas;
   v_c jsonb := coalesce(p_correcciones, '{}'::jsonb);
   v_tipo public.tipos_documento;
+  v_es_menor boolean;
 begin
   perform privado.exigir_rol('operador', 'administrador');
   select * into v from public.personas per where per.id = p_persona_id and per.estado <> 'anonimizada' for update;
@@ -481,6 +569,7 @@ begin
     raise exception using message = 'persona_no_existe';
   end if;
   perform privado.registrar_accion('persona.validar');
+  perform privado.registrar_consulta('ver_persona', v.id);
 
   if v_c ? 'nombres' then v.nombres := privado.limpiar_nombre(v_c ->> 'nombres'); end if;
   if v_c ? 'apellidos' then v.apellidos := privado.limpiar_nombre(v_c ->> 'apellidos'); end if;
@@ -491,26 +580,46 @@ begin
     v.edad_declarada := privado.limpiar_edad(v_c ->> 'edad');
     v.edad_declarada_en := current_date;
   end if;
+  if v_c ? 'acudiente_parentesco' then
+    if v.acudiente_id is null or coalesce(v_c ->> 'acudiente_parentesco', '') not in ('madre', 'padre', 'representante_legal') then
+      raise exception using message = 'parentesco_invalido';
+    end if;
+    v.acudiente_parentesco := v_c ->> 'acudiente_parentesco';
+  end if;
 
   select * into v_tipo from public.tipos_documento t where t.codigo = v.tipo_documento;
   if v_tipo.codigo = 'CC' and privado.edad_estimada(v.edad_declarada, v.edad_declarada_en) < 18 then
     raise exception using message = 'edad_no_coincide_documento';
   end if;
-  if (v_tipo.implica_menor or privado.edad_estimada(v.edad_declarada, v.edad_declarada_en) < 18)
-     and v.acudiente_id is null then
+  v_es_menor := v_tipo.implica_menor or privado.edad_estimada(v.edad_declarada, v.edad_declarada_en) < 18;
+  if v_es_menor and v.acudiente_id is null then
     raise exception using message = 'falta_acudiente';
   end if;
 
-  update public.personas per set
-    nombres = v.nombres, apellidos = v.apellidos, telefono = v.telefono, correo = v.correo,
-    sexo_genero = v.sexo_genero, edad_declarada = v.edad_declarada, edad_declarada_en = v.edad_declarada_en,
-    estado = 'validada',
-    validada_en = coalesce(per.validada_en, now()),
-    validada_por = coalesce(per.validada_por, auth.uid())
-  where per.id = v.id;
+  begin
+    update public.personas per set
+      nombres = v.nombres, apellidos = v.apellidos, telefono = v.telefono, correo = v.correo,
+      sexo_genero = v.sexo_genero, edad_declarada = v.edad_declarada, edad_declarada_en = v.edad_declarada_en,
+      acudiente_parentesco = v.acudiente_parentesco,
+      estado = 'validada',
+      validada_en = coalesce(per.validada_en, now()),
+      validada_por = coalesce(per.validada_por, auth.uid())
+    where per.id = v.id;
+  exception when check_violation or not_null_violation then
+    raise exception using message = 'datos_invalidos';  -- sin DETAIL (A-1)
+  end;
 
   if p_autorizacion is not null then
     perform privado.crear_autorizacion(v.id, p_autorizacion, 'punto', auth.uid());
+  end if;
+
+  -- Un menor solo queda validado si su acudiente autorizó EN PERSONA, en un
+  -- punto, sobre la política vigente (M-2).
+  if v_es_menor and not exists (
+      select 1 from public.autorizaciones_datos a
+        join public.politicas_tratamiento pt on pt.id = a.politica_id and pt.vigente
+       where a.persona_id = v.id and a.estado = 'vigente' and a.canal = 'punto') then
+    raise exception using message = 'falta_autorizacion_presencial';
   end if;
   return privado.resumen_persona(v.id);
 end $$;
@@ -521,6 +630,7 @@ begin
   perform privado.exigir_rol('operador', 'administrador');
   perform privado.registrar_accion('autorizacion.registrar');
   perform privado.crear_autorizacion(p_persona_id, p_autorizacion, 'punto', auth.uid());
+  perform privado.registrar_consulta('ver_persona', p_persona_id);
   return privado.resumen_persona(p_persona_id);
 end $$;
 
@@ -532,6 +642,7 @@ create function privado.resultado_prestamo(p public.prestamos) returns jsonb
 language sql stable security definer set search_path = '' as $$
   select jsonb_build_object(
     'prestamo_id', p.id,
+    'estado', p.estado,
     'codigo', (select b.codigo from public.bicicletas b where b.id = p.bicicleta_id),
     'salida_en', p.salida_en,
     'vence_en', case when privado.parametro_entero('reglas_uso.duracion_maxima_min') is not null
@@ -563,13 +674,16 @@ declare
   v_cuenta integer;
   v_hora time;
   v_foto_persona boolean;
+  v_observaciones text;
   v_nuevo public.prestamos;
 begin
   perform privado.exigir_rol('operador', 'administrador');
   if p_id is null then
     raise exception using message = 'id_operacion_invalido';
   end if;
+  v_observaciones := privado.texto_libre(p_observaciones, 500);
 
+  -- Orden de bloqueo en todo el sistema: bici → persona → punto (compartido) → proyección.
   -- 1. Bloquear la bici: dos operadores no pueden prestarla a la vez.
   select * into v_bici from public.bicicletas b where b.numero = p_numero_bici for update;
   if not found then
@@ -577,6 +691,7 @@ begin
   end if;
 
   -- 2. Idempotencia (después del bloqueo): reintento de la misma operación.
+  --    El resultado incluye el estado actual del préstamo (B-1).
   select * into v_existente from public.prestamos pr where pr.id = p_id;
   if found then
     if v_existente.bicicleta_id = v_bici.id and v_existente.persona_id = p_persona_id
@@ -586,14 +701,14 @@ begin
     raise exception using message = 'id_operacion_reutilizado';
   end if;
 
-  -- 3. Bloquear la persona (orden fijo bici → persona para evitar interbloqueos).
+  -- 3. Bloquear la persona.
   select * into v_persona from public.personas per where per.id = p_persona_id for update;
   if not found or v_persona.estado = 'anonimizada' then
     raise exception using message = 'persona_no_existe';
   end if;
 
-  -- 4. Punto y bici.
-  select * into v_punto from public.puntos p where p.id = p_punto_id;
+  -- 4. Punto (bloqueo compartido: choca con el cierre del punto, B-4) y bici.
+  select * into v_punto from public.puntos p where p.id = p_punto_id for share;
   if not found then
     raise exception using message = 'punto_no_existe';
   end if;
@@ -623,7 +738,7 @@ begin
   if v_persona.estado <> 'validada' then
     raise exception using message = 'persona_no_validada';
   end if;
-  select a.id, a.autoriza_foto into v_aut
+  select a.id, a.autoriza_foto, a.canal into v_aut
     from public.autorizaciones_datos a join public.politicas_tratamiento pt on pt.id = a.politica_id and pt.vigente
    where a.persona_id = v_persona.id and a.estado = 'vigente';
   if v_aut.id is null then
@@ -634,6 +749,10 @@ begin
   v_es_menor := v_tipo.implica_menor or v_edad < 18;
   if v_es_menor and v_persona.acudiente_id is null then
     raise exception using message = 'falta_acudiente';
+  end if;
+  -- Un menor presta solo si su acudiente autorizó en persona, en un punto (M-2).
+  if v_es_menor and v_aut.canal <> 'punto' then
+    raise exception using message = 'falta_autorizacion_presencial';
   end if;
   if exists (select 1 from public.sanciones s
               where s.persona_id = v_persona.id and s.estado = 'vigente' and s.tipo = 'suspension'
@@ -668,7 +787,8 @@ begin
     raise exception using message = 'fuera_de_horario';
   end if;
 
-  -- 7. Foto de evidencia: debe estar subida antes de registrar el préstamo.
+  -- 7. Foto de evidencia: subida antes de registrar, atada al id del préstamo y
+  --    con un tamaño mínimo de foto real (B-2).
   v_foto_persona := coalesce(privado.parametro_booleano('evidencia.foto_persona_obligatoria'), false);
   if v_foto_persona and not v_aut.autoriza_foto then
     raise exception using message = 'falta_autorizacion_foto';
@@ -676,7 +796,9 @@ begin
   if p_foto_ruta is null or p_foto_ruta !~ ('^prestamos/' || p_id::text || '/salida\.(webp|jpg)$') then
     raise exception using message = 'foto_ruta_invalida';
   end if;
-  if not exists (select 1 from storage.objects o where o.bucket_id = 'evidencias' and o.name = p_foto_ruta) then
+  if not exists (select 1 from storage.objects o
+                  where o.bucket_id = 'evidencias' and o.name = p_foto_ruta
+                    and coalesce((o.metadata ->> 'size')::bigint, 0) >= 4096) then
     raise exception using message = 'falta_foto';
   end if;
 
@@ -691,11 +813,14 @@ begin
        p_salida_cliente_en, v_edad, v_es_menor, case when v_es_menor then v_persona.acudiente_id end,
        p_foto_ruta,
        case when v_foto_persona then 'persona_y_bici'::public.contenido_foto else 'solo_bici'::public.contenido_foto end,
-       nullif(btrim(coalesce(p_observaciones, '')), ''))
+       v_observaciones)
     returning * into v_nuevo;
-  exception when unique_violation then
-    -- Última red de seguridad: índice único de un solo préstamo activo por bici.
-    raise exception using message = 'bici_ya_prestada';
+  exception
+    when unique_violation then
+      -- Última red de seguridad: índice único de un solo préstamo activo por bici.
+      raise exception using message = 'bici_ya_prestada';
+    when check_violation or not_null_violation then
+      raise exception using message = 'datos_invalidos';
   end;
 
   update public.bicicletas b
@@ -714,6 +839,7 @@ declare
 begin
   return jsonb_build_object(
     'prestamo_id', p.id,
+    'estado', p.estado,
     'codigo', (select b.codigo from public.bicicletas b where b.id = p.bicicleta_id),
     'persona', (select per.nombres || ' ' || left(per.apellidos, 1) || '.' from public.personas per where per.id = p.persona_id),
     'salida_en', p.salida_en,
@@ -739,23 +865,31 @@ declare
   v_tipo text;
   v_gravedad text;
   v_desc text;
+  v_foto text;
   v_fuera boolean := false;
+  v_observaciones text;
   v_condicion public.condicion_bici;
 begin
   perform privado.exigir_rol('operador', 'administrador');
   if p_id_operacion is null then
     raise exception using message = 'id_operacion_invalido';
   end if;
+  v_observaciones := privado.texto_libre(p_observaciones, 500);
 
   select * into v_bici from public.bicicletas b where b.numero = p_numero_bici for update;
   if not found then
     raise exception using message = 'bici_no_existe';
   end if;
 
-  -- Idempotencia: reintento de la misma devolución.
+  -- Idempotencia: solo es un reintento si coinciden la bici y el punto, y ese
+  -- préstamo sigue siendo el último de la bici: si se volvió a prestar, el id es
+  -- viejo y responder «éxito» engañaría al operador (B-1).
   select * into v_pr from public.prestamos pr where pr.devolucion_id_operacion = p_id_operacion;
   if found then
-    if v_pr.bicicleta_id <> v_bici.id then
+    if v_pr.bicicleta_id <> v_bici.id or v_pr.punto_devolucion_id is distinct from p_punto_id
+       or exists (select 1 from public.prestamos pr
+                   where pr.bicicleta_id = v_bici.id and pr.id <> v_pr.id and pr.estado <> 'anulado'
+                     and pr.salida_en >= v_pr.salida_en) then
       raise exception using message = 'id_operacion_reutilizado';
     end if;
     return privado.resultado_devolucion(v_pr);
@@ -766,7 +900,7 @@ begin
     raise exception using message = 'bici_no_prestada';
   end if;
 
-  select * into v_punto from public.puntos p where p.id = p_punto_id;
+  select * into v_punto from public.puntos p where p.id = p_punto_id for share;
   if not found then
     raise exception using message = 'punto_no_existe';
   end if;
@@ -780,17 +914,27 @@ begin
     end if;
     v_tipo := p_incidencia ->> 'tipo';
     v_gravedad := p_incidencia ->> 'gravedad';
-    v_desc := btrim(coalesce(p_incidencia ->> 'descripcion', ''));
     if v_tipo is null or not (v_tipo = any (enum_range(null::public.tipo_incidencia)::text[])) then
       raise exception using message = 'incidencia_tipo_invalido';
     end if;
     if v_gravedad is null or not (v_gravedad = any (enum_range(null::public.gravedad)::text[])) then
       raise exception using message = 'incidencia_gravedad_invalida';
     end if;
-    if length(v_desc) < 5 then
+    v_desc := privado.texto_libre(p_incidencia ->> 'descripcion', 1000);
+    if coalesce(length(v_desc), 0) < 5 then
       raise exception using message = 'incidencia_descripcion_corta';
     end if;
-    v_fuera := coalesce((p_incidencia ->> 'deja_fuera_de_servicio')::boolean, false);
+    v_fuera := coalesce(privado.booleano(p_incidencia, 'deja_fuera_de_servicio'), false);
+    -- Foto opcional de la novedad: solo una ruta propia de incidencias y ya subida (B-2).
+    v_foto := nullif(p_incidencia ->> 'foto_ruta', '');
+    if v_foto is not null then
+      if v_foto !~ '^incidencias/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[a-z_]{1,30}\.(webp|jpg)$' then
+        raise exception using message = 'foto_ruta_invalida';
+      end if;
+      if not exists (select 1 from storage.objects o where o.bucket_id = 'evidencias' and o.name = v_foto) then
+        raise exception using message = 'falta_foto';
+      end if;
+    end if;
   end if;
 
   perform privado.registrar_accion('prestamo.devolver');
@@ -801,7 +945,7 @@ begin
     operador_devolucion_id = auth.uid(),
     devuelto_en = now(),
     con_novedad = coalesce(p_con_novedad, false),
-    observaciones_devolucion = nullif(btrim(coalesce(p_observaciones, '')), '')
+    observaciones_devolucion = v_observaciones
   where pr.id = v_pr.id
   returning * into v_pr;
 
@@ -810,7 +954,7 @@ begin
       (bicicleta_id, prestamo_id, tipo, gravedad, descripcion, deja_fuera_de_servicio, reportada_por, foto_ruta)
     values
       (v_bici.id, v_pr.id, v_tipo::public.tipo_incidencia, v_gravedad::public.gravedad, v_desc, v_fuera,
-       auth.uid(), nullif(p_incidencia ->> 'foto_ruta', ''));
+       auth.uid(), v_foto);
   end if;
 
   v_condicion := case when v_fuera then 'averiada'::public.condicion_bici else v_bici.condicion end;
@@ -831,9 +975,14 @@ returns table (
 )
 language plpgsql stable security definer set search_path = '' as $$
 declare
+  v_rol public.rol_personal;
   v_max integer := privado.parametro_entero('reglas_uso.duracion_maxima_min');
 begin
-  perform privado.exigir_rol('operador', 'administrador');
+  v_rol := privado.exigir_rol('operador', 'administrador');
+  -- El operador ve solo los préstamos que salieron de su punto (I-3).
+  if v_rol = 'operador' and p_punto_id is null then
+    raise exception using message = 'falta_punto';
+  end if;
   return query
     select pr.id, b.codigo, b.numero, per.nombres || ' ' || left(per.apellidos, 1) || '.', pr.es_menor,
            pu.codigo || ' · ' || pu.nombre, pr.salida_en,
@@ -851,19 +1000,38 @@ end $$;
 create function public.mover_bicis(p_numeros integer[], p_punto_destino uuid, p_motivo text) returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
+  v_motivo text;
   v_destino public.puntos;
-  v_numero integer;
   v_bici public.bicicletas;
-  v_movidas integer := 0;
+  v_bloqueadas integer := 0;
+  v_movidas integer;
 begin
   perform privado.exigir_rol('operador', 'administrador');
-  if length(btrim(coalesce(p_motivo, ''))) < 5 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := privado.motivo(p_motivo, 5);
   if p_numeros is null or cardinality(p_numeros) = 0 then
     raise exception using message = 'sin_bicis';
   end if;
-  select * into v_destino from public.puntos p where p.id = p_punto_destino;
+  if cardinality(p_numeros) > 200 then
+    raise exception using message = 'rango_invalido';
+  end if;
+
+  -- Orden de bloqueo único en todo el sistema (B-3): primero las bicis por número,
+  -- luego el punto destino (compartido, choca con su cierre: B-4) y al final las
+  -- filas de la proyección pública por punto_id.
+  for v_bici in select * from public.bicicletas b where b.numero = any (p_numeros) order by b.numero for update loop
+    v_bloqueadas := v_bloqueadas + 1;
+    if v_bici.disponibilidad = 'prestada' then
+      raise exception using message = 'bici_prestada', detail = v_bici.numero::text;
+    end if;
+    if v_bici.condicion in ('extraviada', 'baja') then
+      raise exception using message = 'bici_no_movible', detail = v_bici.numero::text;
+    end if;
+  end loop;
+  if v_bloqueadas <> (select count(distinct n) from unnest(p_numeros) n) then
+    raise exception using message = 'bici_no_existe';
+  end if;
+
+  select * into v_destino from public.puntos p where p.id = p_punto_destino for share;
   if not found then
     raise exception using message = 'punto_no_existe';
   end if;
@@ -871,27 +1039,19 @@ begin
     raise exception using message = 'punto_cerrado';
   end if;
 
-  perform privado.registrar_accion('bici.mover', btrim(p_motivo));
-  for v_numero in select distinct n from unnest(p_numeros) n order by n loop
-    select * into v_bici from public.bicicletas b where b.numero = v_numero for update;
-    if not found then
-      raise exception using message = 'bici_no_existe', detail = v_numero::text;
-    end if;
-    if v_bici.disponibilidad = 'prestada' then
-      raise exception using message = 'bici_prestada', detail = v_numero::text;
-    end if;
-    if v_bici.condicion in ('extraviada', 'baja') then
-      raise exception using message = 'bici_no_movible', detail = v_numero::text;
-    end if;
-    if v_bici.punto_actual_id is distinct from p_punto_destino then
-      update public.bicicletas b set
-        punto_actual_id = p_punto_destino,
-        disponibilidad = privado.disponibilidad_para(v_bici.condicion, p_punto_destino),
-        ultimo_movimiento_en = now()
-      where b.id = v_bici.id;
-      v_movidas := v_movidas + 1;
-    end if;
-  end loop;
+  perform 1 from public.disponibilidad_puntos d
+   where d.punto_id in (select b.punto_actual_id from public.bicicletas b where b.numero = any (p_numeros)
+                        union select p_punto_destino)
+   order by d.punto_id
+   for update;
+
+  perform privado.registrar_accion('bici.mover', v_motivo);
+  update public.bicicletas b set
+    punto_actual_id = p_punto_destino,
+    disponibilidad = privado.disponibilidad_para(b.condicion, p_punto_destino),
+    ultimo_movimiento_en = now()
+  where b.numero = any (p_numeros) and b.punto_actual_id is distinct from p_punto_destino;
+  get diagnostics v_movidas = row_count;
   return v_movidas;
 end $$;
 
@@ -901,33 +1061,37 @@ create function public.cambiar_condicion_bici(p_numero integer, p_condicion publ
 language plpgsql security definer set search_path = '' as $$
 declare
   v_rol public.rol_personal;
+  v_motivo text;
   v_bici public.bicicletas;
   v_punto uuid;
 begin
   v_rol := privado.exigir_rol('operador', 'administrador');
-  if v_rol = 'operador' and p_condicion <> 'averiada' then
-    raise exception using message = 'no_autorizado', errcode = '42501';
-  end if;
-  if length(btrim(coalesce(p_motivo, ''))) < 5 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := privado.motivo(p_motivo, 5);
   select * into v_bici from public.bicicletas b where b.numero = p_numero for update;
   if not found then
     raise exception using message = 'bici_no_existe';
   end if;
+  -- El operador solo reporta una bici operativa como averiada; no puede «revivir»
+  -- bicis extraviadas o dadas de baja (B-5).
+  if v_rol = 'operador' and (p_condicion <> 'averiada' or v_bici.condicion <> 'operativa') then
+    raise exception using message = 'no_autorizado', errcode = '42501';
+  end if;
   if v_bici.disponibilidad = 'prestada' then
     raise exception using message = 'bici_prestada';
+  end if;
+  if p_punto_id is not null then
+    perform 1 from public.puntos p where p.id = p_punto_id and p.estado <> 'cerrado' for share;
+    if not found then
+      raise exception using message = 'punto_no_existe';
+    end if;
   end if;
 
   v_punto := case when p_condicion = 'extraviada' then null else coalesce(p_punto_id, v_bici.punto_actual_id) end;
   if p_condicion not in ('extraviada', 'baja') and v_punto is null then
     raise exception using message = 'falta_punto';
   end if;
-  if p_punto_id is not null and not exists (select 1 from public.puntos p where p.id = p_punto_id) then
-    raise exception using message = 'punto_no_existe';
-  end if;
 
-  perform privado.registrar_accion('bici.cambiar_condicion', btrim(p_motivo));
+  perform privado.registrar_accion('bici.cambiar_condicion', v_motivo);
   update public.bicicletas b set
     condicion = p_condicion,
     punto_actual_id = v_punto,
@@ -950,7 +1114,8 @@ begin
      or p_hasta - p_desde >= 1000 then
     raise exception using message = 'rango_invalido';
   end if;
-  if not exists (select 1 from public.puntos p where p.id = p_punto_id) then
+  perform 1 from public.puntos p where p.id = p_punto_id and p.estado <> 'cerrado' for share;
+  if not found then
     raise exception using message = 'punto_no_existe';
   end if;
   perform privado.registrar_accion('bici.crear');
@@ -967,32 +1132,42 @@ create function public.vincular_personal(p_correo text, p_nombre text, p_rol pub
 language plpgsql security definer set search_path = '' as $$
 declare
   v_id uuid;
+  v_confirmado timestamptz;
+  v_nombre text := privado.espacios(p_nombre);
 begin
   perform privado.exigir_rol('administrador');
-  select u.id into v_id from auth.users u where lower(u.email) = lower(btrim(coalesce(p_correo, '')));
-  if not found then
+  if length(v_nombre) not between 3 and 120 then
+    raise exception using message = 'nombre_invalido';
+  end if;
+  select u.id, u.email_confirmed_at into v_id, v_confirmado
+    from auth.users u where lower(u.email) = lower(btrim(coalesce(p_correo, '')));
+  if v_id is null then
     raise exception using message = 'usuario_no_existe';
+  end if;
+  -- Solo cuentas con correo confirmado (B-9): si el registro abierto quedara
+  -- activo por error, nadie podría reservar el correo de un futuro operador.
+  if v_confirmado is null then
+    raise exception using message = 'usuario_no_confirmado';
   end if;
   if exists (select 1 from public.personal p where p.id = v_id) then
     raise exception using message = 'ya_vinculado';
   end if;
   perform privado.registrar_accion('personal.vincular');
   insert into public.personal (id, nombre, rol, creado_por)
-  values (v_id, btrim(p_nombre), p_rol, auth.uid());
+  values (v_id, v_nombre, p_rol, auth.uid());
   return v_id;
 end $$;
 
 create function public.anular_prestamo(p_prestamo_id uuid, p_motivo text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
+  v_motivo text;
   v_bici_id uuid;
   v_bici public.bicicletas;
   v_pr public.prestamos;
 begin
   perform privado.exigir_rol('administrador');
-  if length(btrim(coalesce(p_motivo, ''))) < 10 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := privado.motivo(p_motivo, 10);
   select pr.bicicleta_id into v_bici_id from public.prestamos pr where pr.id = p_prestamo_id;
   if not found then
     raise exception using message = 'prestamo_no_existe';
@@ -1002,10 +1177,15 @@ begin
   if v_pr.estado <> 'activo' then
     raise exception using message = 'prestamo_no_activo';
   end if;
+  -- La bici vuelve al punto de salida: no puede ser un punto ya cerrado.
+  perform 1 from public.puntos p where p.id = v_pr.punto_salida_id and p.estado <> 'cerrado' for share;
+  if not found then
+    raise exception using message = 'punto_cerrado';
+  end if;
 
-  perform privado.registrar_accion('prestamo.anular', btrim(p_motivo));
+  perform privado.registrar_accion('prestamo.anular', v_motivo);
   update public.prestamos pr set
-    estado = 'anulado', cerrado_en = now(), cerrado_por = auth.uid(), motivo_cierre = btrim(p_motivo)
+    estado = 'anulado', cerrado_en = now(), cerrado_por = auth.uid(), motivo_cierre = v_motivo
   where pr.id = v_pr.id;
   update public.bicicletas b set
     punto_actual_id = v_pr.punto_salida_id,
@@ -1017,32 +1197,35 @@ end $$;
 create function public.forzar_devolucion(p_prestamo_id uuid, p_punto_id uuid, p_motivo text) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
+  v_motivo text;
   v_bici_id uuid;
   v_bici public.bicicletas;
   v_pr public.prestamos;
 begin
   perform privado.exigir_rol('administrador');
-  if length(btrim(coalesce(p_motivo, ''))) < 10 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := privado.motivo(p_motivo, 10);
   select pr.bicicleta_id into v_bici_id from public.prestamos pr where pr.id = p_prestamo_id;
   if not found then
     raise exception using message = 'prestamo_no_existe';
-  end if;
-  if not exists (select 1 from public.puntos p where p.id = p_punto_id) then
-    raise exception using message = 'punto_no_existe';
   end if;
   select * into v_bici from public.bicicletas b where b.id = v_bici_id for update;
   select * into v_pr from public.prestamos pr where pr.id = p_prestamo_id for update;
   if v_pr.estado <> 'activo' then
     raise exception using message = 'prestamo_no_activo';
   end if;
+  perform 1 from public.puntos p where p.id = p_punto_id for share;
+  if not found then
+    raise exception using message = 'punto_no_existe';
+  end if;
+  if exists (select 1 from public.puntos p where p.id = p_punto_id and p.estado = 'cerrado') then
+    raise exception using message = 'punto_cerrado';
+  end if;
 
-  perform privado.registrar_accion('prestamo.forzar_devolucion', btrim(p_motivo));
+  perform privado.registrar_accion('prestamo.forzar_devolucion', v_motivo);
   update public.prestamos pr set
     estado = 'finalizado', devolucion_id_operacion = gen_random_uuid(), punto_devolucion_id = p_punto_id,
     operador_devolucion_id = auth.uid(), devuelto_en = now(), con_novedad = false,
-    devolucion_forzada = true, observaciones_devolucion = btrim(p_motivo)
+    devolucion_forzada = true, observaciones_devolucion = v_motivo
   where pr.id = v_pr.id
   returning * into v_pr;
   update public.bicicletas b set
@@ -1057,13 +1240,12 @@ end $$;
 create function public.cerrar_no_devuelto(p_prestamo_id uuid, p_motivo text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
+  v_motivo text;
   v_bici_id uuid;
   v_pr public.prestamos;
 begin
   perform privado.exigir_rol('administrador');
-  if length(btrim(coalesce(p_motivo, ''))) < 10 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := privado.motivo(p_motivo, 10);
   select pr.bicicleta_id into v_bici_id from public.prestamos pr where pr.id = p_prestamo_id;
   if not found then
     raise exception using message = 'prestamo_no_existe';
@@ -1074,15 +1256,15 @@ begin
     raise exception using message = 'prestamo_no_activo';
   end if;
 
-  perform privado.registrar_accion('prestamo.cerrar_no_devuelto', btrim(p_motivo));
+  perform privado.registrar_accion('prestamo.cerrar_no_devuelto', v_motivo);
   update public.prestamos pr set
-    estado = 'no_devuelto', cerrado_en = now(), cerrado_por = auth.uid(), motivo_cierre = btrim(p_motivo)
+    estado = 'no_devuelto', cerrado_en = now(), cerrado_por = auth.uid(), motivo_cierre = v_motivo
   where pr.id = v_pr.id;
   update public.bicicletas b set
     condicion = 'extraviada', disponibilidad = 'no_disponible', punto_actual_id = null, ultimo_movimiento_en = now()
   where b.id = v_bici_id;
   insert into public.incidencias (bicicleta_id, prestamo_id, tipo, gravedad, descripcion, deja_fuera_de_servicio, reportada_por)
-  values (v_bici_id, v_pr.id, 'perdida', 'grave', btrim(p_motivo), true, auth.uid());
+  values (v_bici_id, v_pr.id, 'perdida', 'grave', v_motivo, true, auth.uid());
 end $$;
 
 -- Cierra un punto de evento. Exige que no le queden bicis.
@@ -1124,13 +1306,14 @@ end $$;
 create function public.registrar_exportacion(p_con_datos_personales boolean, p_motivo text default null,
                                              p_detalle jsonb default null) returns void
 language plpgsql security definer set search_path = '' as $$
+declare
+  v_motivo text;
 begin
   perform privado.exigir_rol('administrador');
-  if coalesce(p_con_datos_personales, false) and length(btrim(coalesce(p_motivo, ''))) < 10 then
-    raise exception using message = 'motivo_insuficiente';
-  end if;
+  v_motivo := case when coalesce(p_con_datos_personales, false) then privado.motivo(p_motivo, 10)
+                   else privado.texto_libre(p_motivo, 500) end;
   insert into public.bitacora_consultas (actor_id, tipo, con_datos_personales, motivo, detalle)
-  values (auth.uid(), 'exportar', coalesce(p_con_datos_personales, false), nullif(btrim(coalesce(p_motivo, '')), ''), p_detalle);
+  values (auth.uid(), 'exportar', coalesce(p_con_datos_personales, false), v_motivo, p_detalle);
 end $$;
 
 create function public.tablero_resumen() returns jsonb

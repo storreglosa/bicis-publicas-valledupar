@@ -20,7 +20,8 @@ def test_flujo_completo_prestar_y_devolver(bd):
     assert _disponibles(bd, bd.d.p01) == 9
 
     bd.como(bd.d.op1)
-    activos = bd.rpc("prestamos_activos")
+    assert bd.error("prestamos_activos") == "falta_punto"      # el operador ve solo su punto (I-3)
+    activos = bd.rpc("prestamos_activos", p_punto_id=bd.d.p01)
     assert [fila[1] for fila in activos] == ["BPV-003"]
 
     bd.como(bd.d.op2)
@@ -182,8 +183,8 @@ def test_parametro_fuera_de_rango_se_rechaza(bd):
 def test_persona_sancionada_no_presta(bd):
     pid = bd.persona("00100001", validar_con=bd.d.op1)
     bd.como(bd.d.admin)
-    bd.sql("""insert into public.sanciones (persona_id, tipo, motivo, hasta, impuesta_por)
-              values (%s, 'suspension', 'Retraso reiterado (prueba)', current_date + 5, %s)""", (pid, bd.d.admin))
+    bd.sql("""insert into public.sanciones (persona_id, tipo, motivo, hasta)
+              values (%s, 'suspension', 'Retraso reiterado (prueba)', current_date + 5)""", (pid,))
     with pytest.raises(Exception) as e:
         bd.prestar(pid, 1)
     assert "persona_sancionada" in str(e.value)
@@ -325,3 +326,104 @@ def test_personal_sin_administradores_activos_se_impide(bd):
     bd.como(bd.d.admin)
     with pytest.raises(Exception, match="no_puede_degradarse"):
         bd.sql("update public.personal set rol = 'operador' where id = %s", (bd.d.admin,))
+
+
+# --- Correcciones de la revisión de seguridad 1a (docs/privado/revisiones) ------
+
+def test_b1_devolucion_con_id_viejo_tras_un_nuevo_prestamo_no_finge_exito(bd):
+    a = bd.persona("00100001", validar_con=bd.d.op1)
+    b = bd.persona("00100002", validar_con=bd.d.op1)
+    bd.prestar(a, 1)
+    op = uuid.uuid4()
+    bd.como(bd.d.op1)
+    bd.rpc("registrar_devolucion", p_id_operacion=op, p_numero_bici=1, p_punto_id=bd.d.p01)
+    bd.prestar(b, 1)
+    bd.como(bd.d.op1)
+    assert bd.error("registrar_devolucion", p_id_operacion=op, p_numero_bici=1,
+                    p_punto_id=bd.d.p01) == "id_operacion_reutilizado"
+
+
+def test_b2_foto_de_incidencia_solo_ruta_propia_y_subida(bd):
+    pid = bd.persona("00100001", validar_con=bd.d.op1)
+    r = bd.prestar(pid, 1)
+    bd.como(bd.d.op1)
+    base = dict(p_id_operacion=uuid.uuid4(), p_numero_bici=1, p_punto_id=bd.d.p01, p_con_novedad=True)
+    novedad = {"tipo": "dano", "gravedad": "leve", "descripcion": "Timbre suelto"}
+    otra = f"prestamos/{r['prestamo_id']}/salida.webp"
+    assert bd.error("registrar_devolucion", **base, p_incidencia={**novedad, "foto_ruta": otra}) == "foto_ruta_invalida"
+    propia = f"incidencias/{uuid.uuid4()}/dano.webp"
+    assert bd.error("registrar_devolucion", **base, p_incidencia={**novedad, "foto_ruta": propia}) == "falta_foto"
+
+
+def test_b2_foto_minuscula_no_cuenta_como_evidencia(bd):
+    pid = bd.persona("00100001", validar_con=bd.d.op1)
+    prestamo = uuid.uuid4()
+    ruta = f"prestamos/{prestamo}/salida.webp"
+    bd.como(bd.d.op1)
+    bd.sql("insert into storage.objects (bucket_id, name, metadata) values ('evidencias', %s, %s)",
+           (ruta, '{"size": 100}'))
+    assert bd.error("registrar_prestamo", p_id=prestamo, p_persona_id=pid, p_numero_bici=1,
+                    p_punto_id=bd.d.p01, p_foto_ruta=ruta) == "falta_foto"
+
+
+def test_b4_no_se_mueven_bicis_a_un_punto_cerrado(bd):
+    bd.como(bd.d.admin)
+    bd.rpc("cerrar_punto_evento", p_punto_id=bd.d.e01)
+    assert bd.error("mover_bicis", p_numeros=[1], p_punto_destino=bd.d.e01, p_motivo="Llevar al evento") == "punto_cerrado"
+
+
+def test_b5_el_admin_no_cierra_puntos_con_bicis_ni_cambia_su_tipo(bd):
+    bd.como(bd.d.admin)
+    with pytest.raises(Exception, match="punto_con_bicis"):
+        bd.sql("update public.puntos set estado = 'cerrado' where id = %s", (bd.d.p01,))
+    with pytest.raises(Exception, match="permission denied"):
+        bd.sql("update public.puntos set tipo = 'taller' where id = %s", (bd.d.p02,))
+
+
+def test_b5_la_atribucion_de_sanciones_e_incidencias_la_fija_el_servidor(bd):
+    pid = bd.persona("00100001", validar_con=bd.d.op1)
+    bd.como(bd.d.admin)
+    with pytest.raises(Exception, match="permission denied"):
+        bd.sql("insert into public.sanciones (persona_id, tipo, motivo, hasta, impuesta_por) "
+               "values (%s, 'suspension', 'Motivo de prueba suficiente', current_date + 1, %s)", (pid, bd.d.op1))
+    bd.sql("insert into public.sanciones (persona_id, tipo, motivo, hasta) "
+           "values (%s, 'suspension', 'Motivo de prueba suficiente', current_date + 1)", (pid,))
+    assert bd.uno("select impuesta_por from public.sanciones") == bd.d.admin
+    bd.sql("update public.sanciones set estado = 'anulada', motivo_anulacion = 'Error de digitación'")
+    assert bd.uno("select anulada_por from public.sanciones") == bd.d.admin
+
+
+def test_b5_el_operador_no_revive_bicis_dadas_de_baja(bd):
+    bd.como(bd.d.admin)
+    bd.rpc("cambiar_condicion_bici", p_numero=1, p_condicion="baja", p_motivo="Marco partido")
+    bd.como(bd.d.op1)
+    assert bd.error("cambiar_condicion_bici", p_numero=1, p_condicion="averiada", p_motivo="Revivir") == "no_autorizado"
+
+
+def test_b10_textos_libres_tienen_limite(bd):
+    pid = bd.persona("00100001", validar_con=bd.d.op1)
+    prestamo = uuid.uuid4()
+    ruta = bd.subir_foto(prestamo)
+    bd.como(bd.d.op1)
+    assert bd.error("registrar_prestamo", p_id=prestamo, p_persona_id=pid, p_numero_bici=1, p_punto_id=bd.d.p01,
+                    p_foto_ruta=ruta, p_observaciones="x" * 501) == "texto_demasiado_largo"
+
+
+def test_m2_menor_preinscrito_por_web_no_presta_sin_autorizacion_presencial(bd):
+    menor = bd.persona("00200001", tipo="TI", edad=12, acudiente={
+        "tipo_documento": "CC", "numero_documento": "00900001", "nombres": "Madre",
+        "apellidos": "De Prueba", "telefono": "3000000009", "parentesco": "madre"})
+    bd.como(bd.d.op1)
+    assert bd.error("validar_persona", p_persona_id=menor) == "falta_autorizacion_presencial"
+    # Aunque alguien lo marcara validado por fuera de la función, no presta.
+    bd.como("dueno")
+    bd.sql("update public.personas set estado = 'validada', validada_en = now(), validada_por = %s where id = %s",
+           (bd.d.op1, menor))
+    with pytest.raises(Exception) as e:
+        bd.prestar(menor, 1)
+    assert "falta_autorizacion_presencial" in str(e.value)
+    # Con el acudiente presente, el operador registra la autorización y el menor presta.
+    bd.como(bd.d.op1)
+    bd.rpc("validar_persona", p_persona_id=menor, p_autorizacion={
+        "politica_version": "0.1", "autoriza_tratamiento": True, "autoriza_foto": True, "menor_escuchado": True})
+    bd.prestar(menor, 1)

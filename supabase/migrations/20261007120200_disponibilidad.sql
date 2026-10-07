@@ -54,13 +54,21 @@ begin
          excluded.evento_termina_en, excluded.abierto, excluded.visible, excluded.bicis_disponibles);
 end $$;
 
+-- Los puntos se refrescan siempre en orden de punto_id: dos transacciones que
+-- tocan los mismos puntos los bloquean en el mismo orden y no se interbloquean
+-- (revisión de seguridad B-3).
 create function privado.disponibilidad_por_bici() returns trigger
 language plpgsql security definer set search_path = '' as $$
+declare
+  v_punto uuid;
 begin
-  if tg_op = 'UPDATE' and old.punto_actual_id is distinct from new.punto_actual_id then
-    perform privado.refrescar_disponibilidad(old.punto_actual_id);
-  end if;
-  perform privado.refrescar_disponibilidad(new.punto_actual_id);
+  for v_punto in
+    select distinct x from unnest(array[
+      case when tg_op = 'UPDATE' then old.punto_actual_id end, new.punto_actual_id]) x
+     where x is not null order by x
+  loop
+    perform privado.refrescar_disponibilidad(v_punto);
+  end loop;
   return null;
 end $$;
 
@@ -82,7 +90,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_punto uuid;
 begin
-  for v_punto in select p.id from public.puntos p where p.evento_id = new.id loop
+  for v_punto in select p.id from public.puntos p where p.evento_id = new.id order by p.id loop
     perform privado.refrescar_disponibilidad(v_punto);
   end loop;
   return null;
