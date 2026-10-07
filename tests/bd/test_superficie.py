@@ -2,7 +2,18 @@
 
 Si alguien agrega una tabla o función y olvida cerrar permisos, esta prueba
 falla. Agregar algo a una lista blanca exige justificarlo en la revisión.
+
+No necesita datos: corre en local y también contra Supabase real
+(BICIS_BD_SERVICIO=bicis_dev), después de cada scripts/migrar.sh.
 """
+
+import pytest
+
+
+@pytest.fixture
+def bd(bd_vacia):
+    """En este módulo `bd` es una sesión sin datos sembrados."""
+    return bd_vacia
 
 PRIVILEGIOS = ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER")
 

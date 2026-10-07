@@ -4,6 +4,11 @@ Modo local (por defecto): crea una base nueva en el Postgres local
 (`scripts/pg_local.sh start`), aplica tests/bd/stub_supabase.sql y todas las
 migraciones con psql, y corre las pruebas.
 
+Modo remoto (solo pruebas de superficie, que no siembran datos):
+    BICIS_BD_SERVICIO=bicis_dev python -m pytest tests/bd/test_superficie.py
+usa el proyecto Supabase con las migraciones ya aplicadas (scripts/migrar.sh),
+dentro de una transacción que se revierte.
+
 Cada prueba corre dentro de una transacción que se revierte al final: no deja
 residuos. Los roles se simulan como lo hace Supabase: `set local role` +
 `request.jwt.claims`.
@@ -52,8 +57,13 @@ def crear_bd(nombre: str) -> str:
     return destino
 
 
+SERVICIO_REMOTO = os.environ.get("BICIS_BD_SERVICIO")
+
+
 @pytest.fixture(scope="session")
 def dsn() -> str:
+    if SERVICIO_REMOTO:
+        return f"service={SERVICIO_REMOTO}"
     return crear_bd(NOMBRE_BD)
 
 
@@ -251,8 +261,18 @@ class Sesion:
 
 
 @pytest.fixture
+def bd_vacia(dsn):
+    """Sesión sin datos sembrados (sirve también contra Supabase real)."""
+    with psycopg.connect(dsn) as conn:
+        with conn.transaction(force_rollback=True):
+            yield Sesion(conn, None)
+
+
+@pytest.fixture
 def bd(dsn):
     """Sesión con datos sembrados dentro de una transacción que se revierte."""
+    if SERVICIO_REMOTO:
+        pytest.skip("las pruebas con datos sembrados corren solo en la base local")
     with psycopg.connect(dsn) as conn:
         with conn.transaction(force_rollback=True):
             with conn.cursor() as cur:

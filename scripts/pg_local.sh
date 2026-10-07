@@ -20,6 +20,6 @@ case "${1:-status}" in
     echo "conexión: host=$SOCKET port=$PUERTO user=postgres dbname=postgres"
     ;;
   stop)   "$BIN/pg_ctl" -D "$DATOS" -m fast stop ;;
-  status) "$BIN/pg_ctl" -D "$DATOS" status || true ;;
+  status) "$BIN/pg_ctl" -D "$DATOS" status ;;
   *) echo "uso: $0 start|stop|status" >&2; exit 2 ;;
 esac
