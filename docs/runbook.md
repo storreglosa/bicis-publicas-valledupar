@@ -64,7 +64,24 @@ Solo datos públicos: el **ref** y la **Project URL** de dev y de prod, las dos 
 **site key** de Turnstile. Las contraseñas y las claves secretas se quedan en tus archivos o en el Dashboard.
 
 ## 2. Migraciones
-(se completa en Fase 1a: `scripts/migrar.sh dev|prod`)
+(se completa al conectar dev: `scripts/migrar.sh dev|prod`)
+
+### 2.1 Verificaciones obligatorias la primera vez contra Supabase (dev)
+Salen de la revisión de seguridad de la fase 1a: en local no se pueden comprobar.
+- [ ] `select rolsuper, rolbypassrls from pg_roles where rolname = 'postgres';` — anotar el resultado.
+- [ ] Préstamo de punta a punta con foto subida por la API de Storage (no por SQL): confirma que
+      `registrar_prestamo` ve el objeto y que `metadata->>'size'` existe.
+- [ ] `select relrowsecurity from pg_class where oid = 'auth.users'::regclass;` y `vincular_personal` real.
+- [ ] El INSERT del bucket aceptó `file_size_limit` y `allowed_mime_types`; `select public from storage.buckets where id = 'evidencias'` → `false`.
+- [ ] `test_superficie` contra dev después de cada `db push` (anon, authenticated, service_role, PUBLIC).
+- [ ] PostgREST: una RPC con `Prefer: tx=rollback` no debe poder revertir la bitácora de `buscar_persona`.
+- [ ] Un error de validación en `validar_persona` vía HTTP: el campo `details` de la respuesta debe venir vacío.
+
+### 2.2 Riesgos residuales aceptados (MVP)
+- Las lecturas directas del administrador (`personas`, `v_prestamos_admin`) no se registran en la bitácora;
+  las exportaciones sí (pgaudit u RPC de lectura en Fase 2).
+- `marcar_clave_cambiada` es un control de interfaz: no comprueba que la clave haya cambiado.
+- El mensaje «ya estás inscrito» revela que un documento existe (mitigado con Turnstile y límite de tasa).
 
 ## 3. Respaldo y restauración
 (se completa en Fase 1g)
