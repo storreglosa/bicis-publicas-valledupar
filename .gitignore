@@ -1,0 +1,40 @@
+# Secretos y configuración local (nunca al repo)
+.env
+.env.*
+!.env.example
+.pgpass
+pg_service.conf
+
+# Notas internas de la STTV: no van a un repo público
+docs/privado/
+
+# Dependencias y artefactos de build
+node_modules/
+dist/
+supabase/.temp/
+supabase/.branches/
+
+# Pruebas
+test-results/
+playwright-report/
+coverage/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Datos: los datos personales viven solo en Supabase, nunca en el repo
+*.csv
+*.xlsx
+*.xls
+*.dump
+*.dump.gpg
+*.sql.gz
+respaldos/
+capturas/
+
+# Editor y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
