@@ -62,7 +62,7 @@ function dibujar() {
     }).bindPopup(() => popup(p)).addTo(capa)
   }
   if (!ajustado && props.puntos.length) {
-    mapa.fitBounds(L.latLngBounds(props.puntos.map((p) => [p.latitud, p.longitud])), { padding: [40, 40], maxZoom: 16 })
+    mapa.fitBounds(L.latLngBounds(props.puntos.map((p) => [p.latitud, p.longitud])), { padding: [64, 64], maxZoom: 16 })
     ajustado = true
   }
 }

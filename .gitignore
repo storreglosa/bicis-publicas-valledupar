@@ -41,3 +41,6 @@ Thumbs.db
 
 # Postgres local de pruebas (scripts/pg_local.sh)
 .pg_local/
+
+# Build de la demo (apunta a dev)
+dist-demo/

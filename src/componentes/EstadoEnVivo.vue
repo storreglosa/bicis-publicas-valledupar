@@ -14,6 +14,7 @@ const hora = computed(() => props.actualizado
 const texto = computed(() => {
   switch (props.estado) {
     case 'en_vivo': return `En vivo · actualizado ${hora.value}`
+    case 'conectando': return `Actualizado ${hora.value} · conectando en vivo…`
     case 'sondeo': return `Actualizado ${hora.value ?? '—'} · se refresca cada minuto`
     case 'cargando': return 'Cargando disponibilidad…'
     case 'sin_configurar': return 'La conexión con la base de datos aún no está configurada.'

@@ -24,7 +24,7 @@ function normalizar(fila) {
 
 export function useDisponibilidad() {
   const puntos = ref([])
-  const estado = ref(configurado ? 'cargando' : 'sin_configurar') // cargando | en_vivo | sondeo | error | sin_configurar
+  const estado = ref(configurado ? 'cargando' : 'sin_configurar') // cargando | conectando | en_vivo | sondeo | error | sin_configurar
   const actualizado = ref(null)
   const error = ref(null)
   let canal = null
@@ -46,6 +46,7 @@ export function useDisponibilidad() {
     puntos.value = data.map(normalizar)
     actualizado.value = new Date()
     error.value = null
+    if (estado.value === 'cargando' || estado.value === 'error') estado.value = 'conectando'
   }
 
   function aplicarCambio(cambio) {
