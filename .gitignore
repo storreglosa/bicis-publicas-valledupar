@@ -38,3 +38,6 @@ capturas/
 .DS_Store
 Thumbs.db
 *.log
+
+# Postgres local de pruebas (scripts/pg_local.sh)
+.pg_local/

@@ -32,7 +32,18 @@ docs/privado/ notas internas (en .gitignore: NO van al repo público)
 - `git push` lo confirma Santiago.
 
 ## Comandos frecuentes
-(se completan en Fase 0/1)
+```bash
+conda activate bicis                     # Python 3.12 + PostgreSQL 17 (environment.yml)
+scripts/pg_local.sh start                # Postgres local en .pg_local/ (puerto 54329)
+python -m pytest tests/bd -q             # migraciones + RLS + funciones contra base local nueva
+python -m pytest tests/test_contraste.py # contraste WCAG de tokens.css
+npm run dev                              # http://localhost:5173/bicis-publicas-valledupar/ (#/paleta solo en dev)
+npm run build
+```
+- Las pruebas de BD crean `bicis_pruebas` (cada prueba se revierte) y `bicis_pruebas_aislada`
+  (concurrencia, con commit) desde cero en cada corrida. `tests/bd/stub_supabase.sql` imita lo
+  mínimo de Supabase (roles, `auth.uid()`, storage, publicación realtime); **nunca se aplica en Supabase**.
+- Red lenta en npm: `npm install --maxsockets=4 --fetch-timeout=600000`.
 
 ## Decisiones tomadas
 Ver tabla completa en `docs/plan-aprobado-2026-10-07.md`. Resumen:
