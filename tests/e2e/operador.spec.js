@@ -162,7 +162,7 @@ test('un menor sin autorización presencial exige que el acudiente autorice en e
       body: JSON.stringify({ ...menor, autorizacion_presencial: true }) })
   })
 
-  await page.goto('#/ingresar?ir=/operador/prestar')
+  await page.goto('#/operador')
   await page.getByLabel('Correo').fill('operador@prueba.invalid')
   await page.getByLabel('Clave').fill('clave-de-prueba')
   await page.getByRole('button', { name: 'Ingresar' }).click()
