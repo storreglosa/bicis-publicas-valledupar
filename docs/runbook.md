@@ -10,7 +10,7 @@ ajusta esta guía.
 | Qué | Cuándo | Por qué |
 |---|---|---|
 | Proyecto Supabase **dev** | Ahora | Bloquea la demo y la vista del operador |
-| Proyecto Supabase **prod** | En el hito 1g (antes del piloto) | El plan Free pausa un proyecto tras 7 días sin uso |
+| Proyecto Supabase **prod** | Ya creado (2026-10-07); se usa desde el hito 1g | Mientras esté vacío puede pausarse a los 7 días sin uso: se reactiva con **Restore** en su Dashboard, sin pérdida |
 | Widget **Turnstile** real | En el hito 1e/1g | En desarrollo se usan las claves de prueba de Cloudflare, que funcionan en `localhost` |
 
 ### 1.1 Supabase: cuenta, organización y proyecto dev
@@ -24,6 +24,9 @@ ajusta esta guía.
    - Si aparece una sección de seguridad/Data API: deja **activa** la Data API y **sin** exponer tablas
      automáticamente (las migraciones conceden permisos de forma explícita).
    - Espera a que termine de aprovisionar (unos minutos).
+Los pasos 4 y 5 se hacen en **cada** proyecto (dev y prod): cada uno tiene sus propios usuarios. Mismo correo,
+claves distintas.
+
 4. **Registro cerrado:** Authentication → configuración de *Sign In / Providers* → desactiva
    **"Allow new users to sign up"**. Deja activo el proveedor **Email** (el personal entra con correo y clave).
 5. **Tu cuenta de administrador:** Authentication → Users → **Add user** → *Create new user*: tu correo y una
@@ -44,10 +47,17 @@ nano ~/.pg_service.conf
 ```
 ```ini
 [bicis_dev]
-host=<host del session pooler>
+host=<host del session pooler de dev>
 port=5432
 dbname=postgres
-user=postgres.<ref>
+user=postgres.<ref de dev>
+sslmode=require
+
+[bicis_prod]
+host=<host del session pooler de prod>
+port=5432
+dbname=postgres
+user=postgres.<ref de prod>
 sslmode=require
 ```
 
@@ -55,7 +65,8 @@ sslmode=require
 nano ~/.pgpass
 ```
 ```
-<host del session pooler>:5432:postgres:postgres.<ref>:<contraseña de la base de datos>
+<host dev>:5432:postgres:postgres.<ref dev>:<contraseña de la base de datos de dev>
+<host prod>:5432:postgres:postgres.<ref prod>:<contraseña de la base de datos de prod>
 ```
 Si la contraseña tiene `:` o `\`, escríbelos como `\:` y `\\`. Luego:
 
@@ -63,8 +74,9 @@ Si la contraseña tiene `:` o `\`, escríbelos como `\:` y `\\`. Luego:
 chmod 600 ~/.pgpass
 conda activate bicis
 psql "service=bicis_dev" -c "select version();"
+psql "service=bicis_prod" -c "select version();"
 ```
-Debe responder `PostgreSQL 17…`.
+Ambos deben responder `PostgreSQL 17…`.
 
 ### 1.3 Cloudflare Turnstile (más adelante, hito 1e/1g)
 1. Cuenta gratuita en Cloudflare → **Turnstile** → **Add widget**.
@@ -76,8 +88,9 @@ Debe responder `PostgreSQL 17…`.
    `1x0000000000000000000000000000000AA`: siempre pasan; funcionan en `localhost`).
 
 ### 1.4 Lo que me pasas cuando termines
-Solo datos públicos: el **ref**, la **Project URL** y la **publishable key** de dev; el **correo** de tu cuenta
-de administrador (para vincularla como administrador) y la confirmación de que el `psql` de 1.2 respondió.
+Solo datos públicos: el **ref**, la **Project URL** y la **publishable key** de cada proyecto; el **correo** de tu
+cuenta de administrador y la confirmación de que los dos `psql` de 1.2 respondieron. Prod no se toca hasta el
+hito 1g y siempre con confirmación explícita.
 Las contraseñas y las claves secretas se quedan en tus archivos o en el Dashboard.
 
 ## 2. Migraciones
