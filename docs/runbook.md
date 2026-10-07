@@ -94,16 +94,28 @@ hito 1g y siempre con confirmación explícita.
 Las contraseñas y las claves secretas se quedan en tus archivos o en el Dashboard.
 
 ## 2. Migraciones
-(se completa al conectar dev: `scripts/migrar.sh dev|prod`)
+```bash
+scripts/migrar.sh dev                 # simulación: lista las pendientes
+scripts/migrar.sh dev --aplicar       # aplica en dev (una transacción por archivo)
+BICIS_BD_SERVICIO=bicis_dev python -m pytest tests/bd/test_superficie.py   # siempre después
+```
+Prod: `scripts/migrar.sh prod --aplicar --confirmar <ref-de-prod>`, solo con aprobación explícita de Santiago.
+Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
+Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 
 ### 2.1 Verificaciones obligatorias la primera vez contra Supabase (dev)
 Salen de la revisión de seguridad de la fase 1a: en local no se pueden comprobar.
-- [ ] `select rolsuper, rolbypassrls from pg_roles where rolname = 'postgres';` — anotar el resultado.
+- [x] `select rolsuper, rolbypassrls from pg_roles where rolname = 'postgres';` → dev 2026-10-07: `rolsuper = f`,
+      `rolbypassrls = t`. Las funciones leen `storage.objects` y `auth.users` (la política explícita queda de respaldo).
 - [ ] Préstamo de punta a punta con foto subida por la API de Storage (no por SQL): confirma que
       `registrar_prestamo` ve el objeto y que `metadata->>'size'` existe.
-- [ ] `select relrowsecurity from pg_class where oid = 'auth.users'::regclass;` y `vincular_personal` real.
-- [ ] El INSERT del bucket aceptó `file_size_limit` y `allowed_mime_types`; `select public from storage.buckets where id = 'evidencias'` → `false`.
-- [ ] `test_superficie` contra dev después de cada `db push` (anon, authenticated, service_role, PUBLIC).
+- [x] `auth.users` tiene RLS (`t`), dueño `supabase_auth_admin`; `postgres` la lee por BYPASSRLS. Primer admin
+      vinculado en dev con `vincular_admin_inicial.sh`.
+- [x] `storage.buckets` tiene `file_size_limit` y `allowed_mime_types`; la migración de permisos se aplicó sin error.
+- [x] `test_superficie` contra dev: 14/14 (2026-10-07). Repetir después de cada migración.
+- [x] Privilegios por defecto de dev: esquema **clásico** (ALL para anon/authenticated/service_role en public), el
+      peor caso que simula el stub. Supabase crea además `public.rls_auto_enable()` (trigger de eventos que activa
+      RLS en tablas nuevas); la migración le quita el EXECUTE a PUBLIC sin apagar el trigger (probado en local).
 - [ ] PostgREST: una RPC con `Prefer: tx=rollback` no debe poder revertir la bitácora de `buscar_persona`.
 - [ ] Un error de validación en `validar_persona` vía HTTP: el campo `details` de la respuesta debe venir vacío.
 
