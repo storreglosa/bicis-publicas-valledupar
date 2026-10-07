@@ -5,12 +5,16 @@
 //    (RLS no le entrega a anon ese UPDATE) y el límite de 24 h de las conexiones.
 // 4. Si el canal falla, sondeo cada 60 s y se avisa "actualizado hh:mm".
 // 5. En segundo plano se suelta la conexión (el plan Free admite 200).
+// 6. Recarga 3 s después de suscribirse: el servidor tarda un momento en activar
+//    la suscripción tras 'SUBSCRIBED' y un cambio en ese hueco se perdería
+//    (medido contra dev el 2026-10-07 con scripts/escuchar_tiempo_real.mjs).
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { traducirError } from '../lib/errores.js'
 import { configurado, supabase } from '../lib/supabase.js'
 
 const RECARGA_MS = 5 * 60 * 1000
 const SONDEO_MS = 60 * 1000
+const CALENTAMIENTO_MS = 3 * 1000
 const COLUMNAS = 'punto_id,codigo,nombre,tipo,latitud,longitud,direccion,horario_texto,' +
   'evento_nombre,evento_inicia_en,evento_termina_en,abierto,bicis_disponibles,actualizado_en'
 
@@ -25,6 +29,7 @@ export function useDisponibilidad() {
   const error = ref(null)
   let canal = null
   let temporizador = null
+  let calentamiento = null
   let activo = false
 
   async function cargar() {
@@ -67,6 +72,8 @@ export function useDisponibilidad() {
         if (estadoCanal === 'SUBSCRIBED') {
           estado.value = 'en_vivo'
           programar(RECARGA_MS)
+          clearTimeout(calentamiento)
+          calentamiento = setTimeout(() => activo && cargar(), CALENTAMIENTO_MS)
         } else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(estadoCanal)) {
           estado.value = 'sondeo'
           programar(SONDEO_MS)
@@ -83,6 +90,7 @@ export function useDisponibilidad() {
   function detener() {
     activo = false
     clearInterval(temporizador)
+    clearTimeout(calentamiento)
     if (canal) {
       supabase.removeChannel(canal)
       canal = null
