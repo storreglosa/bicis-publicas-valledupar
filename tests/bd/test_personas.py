@@ -328,3 +328,12 @@ def test_b10_limite_de_busquedas_por_operador(bd):
     assert bd.error("buscar_persona", p_tipo="CC", p_numero="00100001") == "demasiadas_busquedas"
     bd.como(bd.d.op2)                                    # otro operador no queda bloqueado
     assert bd.rpc("buscar_persona", p_tipo="CC", p_numero="00100001") is None
+
+
+def test_resumen_indica_si_la_autorizacion_fue_presencial(bd):
+    pid = bd.persona("00100001")                       # preinscrita por web
+    bd.como(bd.d.op1)
+    assert bd.rpc("buscar_persona", p_tipo="CC", p_numero="00100001")["autorizacion_presencial"] is False
+    r = bd.rpc("registrar_autorizacion", p_persona_id=pid, p_autorizacion={
+        "politica_version": "0.1", "autoriza_tratamiento": True, "autoriza_foto": True})
+    assert r["autorizacion_presencial"] is True
