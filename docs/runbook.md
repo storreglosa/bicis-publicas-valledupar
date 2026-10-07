@@ -107,8 +107,9 @@ Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 Salen de la revisión de seguridad de la fase 1a: en local no se pueden comprobar.
 - [x] `select rolsuper, rolbypassrls from pg_roles where rolname = 'postgres';` → dev 2026-10-07: `rolsuper = f`,
       `rolbypassrls = t`. Las funciones leen `storage.objects` y `auth.users` (la política explícita queda de respaldo).
-- [ ] Préstamo de punta a punta con foto subida por la API de Storage (no por SQL): confirma que
-      `registrar_prestamo` ve el objeto y que `metadata->>'size'` existe.
+- [x] Préstamo de punta a punta con foto subida por la API de Storage desde el celular de Santiago
+      (2026-10-07, C2): 2 préstamos y devoluciones en dev; fotos WebP de 42 KB y 15 KB con `metadata.size`,
+      `owner_id` y ligadas al préstamo; autorización presencial, bitácora y auditoría correctas.
 - [x] `auth.users` tiene RLS (`t`), dueño `supabase_auth_admin`; `postgres` la lee por BYPASSRLS. Primer admin
       vinculado en dev con `vincular_admin_inicial.sh`.
 - [x] `storage.buckets` tiene `file_size_limit` y `allowed_mime_types`; la migración de permisos se aplicó sin error.
@@ -118,6 +119,8 @@ Salen de la revisión de seguridad de la fase 1a: en local no se pueden comproba
       RLS en tablas nuevas); la migración le quita el EXECUTE a PUBLIC sin apagar el trigger (probado en local).
 - [ ] PostgREST: una RPC con `Prefer: tx=rollback` no debe poder revertir la bitácora de `buscar_persona`.
 - [ ] Un error de validación en `validar_persona` vía HTTP: el campo `details` de la respuesta debe venir vacío.
+      (Cubierto en la base: las pruebas A-1 verifican que el error no trae DETAIL; PostgREST solo reenvía
+      ese campo. Falta la prueba por HTTP con una sesión real.)
 
 ### 2.2 Riesgos residuales aceptados (MVP)
 - Las lecturas directas del administrador (`personas`, `v_prestamos_admin`) no se registran en la bitácora;
