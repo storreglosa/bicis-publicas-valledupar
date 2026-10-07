@@ -1,5 +1,16 @@
 <script setup>
+import { useRouter } from 'vue-router'
 import sitio from '../sitio.config.js'
+import { useInactividad } from './composables/useInactividad.js'
+import { salir, sesion } from './lib/sesion.js'
+
+const router = useRouter()
+useInactividad()
+
+async function cerrarTurno() {
+  await salir()
+  router.push({ name: 'ingresar', query: { motivo: 'salida' } })
+}
 
 const logo = `${import.meta.env.BASE_URL}marca/logo_sttv.png`
 // Versión de demostración conectada al proyecto de desarrollo (datos ficticios).
@@ -25,7 +36,11 @@ const anio = new Date().getFullYear()
           <li><RouterLink to="/mapa">Mapa</RouterLink></li>
           <li><RouterLink to="/reglas">Reglas</RouterLink></li>
           <li><RouterLink to="/eventos">Eventos</RouterLink></li>
-          <li><RouterLink to="/inscribirme" class="menu__destacado">Inscribirme</RouterLink></li>
+          <li v-if="!sesion.perfil"><RouterLink to="/inscribirme" class="menu__destacado">Inscribirme</RouterLink></li>
+          <template v-if="sesion.perfil">
+            <li><RouterLink to="/operador" class="menu__destacado">Turno</RouterLink></li>
+            <li><button type="button" class="menu__salir" @click="cerrarTurno">Cerrar turno</button></li>
+          </template>
         </ul>
       </nav>
     </div>
@@ -49,6 +64,7 @@ const anio = new Date().getFullYear()
           <span v-else>PQRSD: canal por definir</span>
         </li>
         <li>© {{ anio }} {{ sitio.alcaldia }}. Derechos de autor por definir.</li>
+        <li v-if="!sesion.perfil"><RouterLink to="/ingresar">Ingreso del personal</RouterLink></li>
       </ul>
     </div>
   </footer>
@@ -107,6 +123,10 @@ const anio = new Date().getFullYear()
 }
 .menu a.router-link-active { color: var(--primario); text-decoration: underline; }
 .menu__destacado { color: var(--primario) !important; }
+.menu__salir {
+  min-height: var(--toque-min); padding: 0 var(--esp-3); border: 2px solid var(--linea-fuerte); border-radius: var(--radio-m);
+  background: var(--superficie); color: var(--tinta-1); font: inherit; font-weight: 600; cursor: pointer;
+}
 
 main { min-height: 60vh; outline: none; }
 
