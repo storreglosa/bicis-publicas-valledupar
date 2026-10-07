@@ -1,5 +1,15 @@
 <!-- Diseño detallado generado por el agente Plan de Claude Code el 2026-10-07. Revisé las plantillas locales y verifiqué los hechos técnicos en la documentación oficial; las fuentes están en la sección 13. -->
 
+> **Prevalencia.** Este diseño se escribió antes de cerrar algunas decisiones. Donde difiera de
+> `plan-aprobado-2026-10-07.md` o de `decisiones.md`, prevalecen estos dos. Diferencias conocidas:
+> - **Foto (§0.4, §3, §4):** el diseño proponía la autorización de la foto separada y opcional. Santiago decidió
+>   que sea **obligatoria** (D-10), controlada por el parámetro `evidencia.foto_persona_obligatoria = true`
+>   (si es falso, se exige foto solo de la bici). `autorizaciones_datos.autoriza_foto` se mantiene como
+>   constancia de la autorización.
+> - **Archivos de documentación (§2):** `modelo-datos.md`, `seguridad.md` y `wireframes.md` no se crean aparte
+>   (D-19): su contenido está aquí, en §3, §4 y §6.
+> - **Licencia (§2):** pendiente de definir por la entidad (D-20); no se asume MIT.
+
 # Plan de implementación: Bicis Públicas Valledupar (STTV)
 
 ## 0. Lo que cambia o condiciona las decisiones (leer primero)

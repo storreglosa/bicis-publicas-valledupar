@@ -1,0 +1,91 @@
+/* Tokens de diseño — Bicis Públicas Valledupar.
+ *
+ * Única fuente de color, tipografía y espaciado de la app. La paleta es cálida
+ * y ciudadana (arena, mango, verde del Guatapurí) y convive con el escudo a
+ * color del logo de la Alcaldía.
+ *
+ * Regla al tocar un color: su contraste se mide contra el PEOR de los fondos
+ * donde puede caer (lección del sistema editorial de ArcgisManage). Lo
+ * verifica tests/test_contraste.py con los umbrales de WCAG 2.1 AA:
+ *   texto 4,5:1 · bordes de controles, foco y marcadores 3:1.
+ *
+ * Solo tema claro en el MVP: los operadores trabajan al aire libre y al sol.
+ */
+
+@font-face {
+  font-family: "Funnel Sans";
+  src: url("./fuentes/funnel-sans.woff2") format("woff2");
+  font-weight: 400 650;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* Fondos */
+  --fondo: #fbf7f0;          /* arena: lienzo de la app */
+  --banda: #f3ece0;          /* secciones y recuadros */
+  --superficie: #ffffff;     /* tarjetas, campos de formulario */
+
+  /* Tintas (texto) */
+  --tinta-1: #221c17;        /* texto principal */
+  --tinta-2: #5a4e44;        /* texto secundario, metadatos */
+
+  /* Bordes */
+  --linea: #e4dacb;          /* separadores decorativos (no portan información) */
+  --linea-fuerte: #8a7d70;   /* bordes de campos y controles: 3:1 contra los fondos */
+
+  /* Acción */
+  --primario: #b4460a;       /* mango: botones principales, enlaces */
+  --primario-hover: #8f3707;
+  --sobre-primario: #ffffff;
+  --secundario: #0b6e64;     /* verde Guatapurí: acciones secundarias, acentos */
+  --secundario-hover: #08544c;
+  --sobre-secundario: #ffffff;
+  --foco: #0b6e64;           /* anillo de foco */
+
+  /* Estado de un punto en el mapa: se usan como relleno de marcador con el
+     número en blanco encima, y como texto de etiqueta. Nunca solos: el número
+     y la palabra van siempre impresos (daltonismo). */
+  --estado-disponible: #1a7a3a;
+  --estado-pocas: #8a5a00;
+  --estado-sin: #b3261e;
+  --estado-sin-dato: #6b625a;
+  --sobre-estado: #ffffff;
+
+  /* Mensajes al usuario */
+  --exito: #1a7a3a;
+  --aviso: #8a5a00;
+  --error: #b3261e;
+  --exito-fondo: #e6f2e9;
+  --aviso-fondo: #f8eedb;
+  --error-fondo: #f9e5e3;
+
+  /* Tipografía */
+  --fuente: "Funnel Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --texto-xs: 0.8125rem;
+  --texto-s: 0.9375rem;
+  --texto-m: 1.0625rem;      /* cuerpo: un poco mayor por uso en exteriores */
+  --texto-l: 1.375rem;
+  --texto-xl: 1.875rem;
+  --texto-xxl: 2.5rem;
+  --interlineado: 1.5;
+
+  /* Espaciado (escala de 4 px) */
+  --esp-1: 0.25rem;
+  --esp-2: 0.5rem;
+  --esp-3: 0.75rem;
+  --esp-4: 1rem;
+  --esp-5: 1.5rem;
+  --esp-6: 2rem;
+  --esp-7: 3rem;
+
+  /* Forma */
+  --radio-s: 6px;
+  --radio-m: 10px;
+  --radio-l: 16px;
+  --sombra: 0 1px 2px rgba(34, 28, 23, 0.08), 0 4px 12px rgba(34, 28, 23, 0.06);
+  --toque-min: 48px;         /* área táctil mínima (operador con guantes o al sol) */
+  --ancho-max: 72rem;
+}

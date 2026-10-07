@@ -1,0 +1,14 @@
+# Entorno de herramientas del repo (no es la app: la app es JavaScript).
+# Da psql / pg_dump / un servidor Postgres local para probar migraciones y
+# restaurar respaldos sin Docker, y Python para pruebas y scripts.
+#   conda env create -f environment.yml
+#   conda activate bicis
+name: bicis
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - postgresql=17
+  - pip
+  - pip:
+      - -r requirements-dev.txt
