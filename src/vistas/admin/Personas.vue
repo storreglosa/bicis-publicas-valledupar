@@ -4,6 +4,7 @@
 // el detalle completo solo al abrir una persona. Quién impone o anula una sanción
 // lo fija la base (no se puede atribuir a otro).
 import { computed, ref } from 'vue'
+import Dialogo from '../../componentes/admin/Dialogo.vue'
 import { traducirError } from '../../lib/errores.js'
 import { normalizarDocumento } from '../../lib/documento.js'
 import { supabase } from '../../lib/supabase.js'
@@ -69,6 +70,7 @@ async function abrir(id) {
   persona.value = p.data
   detalle.value = { acudiente, autorizaciones: a.data, sanciones: s.data, historial: h.data }
   suspension.value = { hasta: '', motivo: '' }
+  return true
 }
 
 async function suspender() {
@@ -76,8 +78,8 @@ async function suspender() {
     persona_id: persona.value.id, tipo: 'suspension', motivo: suspension.value.motivo, desde: hoy, hasta: suspension.value.hasta,
   })
   if (error) return avisar('error', /check/i.test(error.message) ? 'Revisa la fecha final y el motivo (10 a 500 caracteres).' : traducirError(error).mensaje)
-  avisar('exito', 'Suspensión registrada. La persona no podrá prestar hasta esa fecha.')
-  abrir(persona.value.id)
+  // Recarga la ficha (eso limpia el aviso) y después confirma; si la recarga falla, queda su error.
+  if (await abrir(persona.value.id)) avisar('exito', 'Suspensión registrada. La persona no podrá prestar hasta esa fecha.')
 }
 
 async function anular(s) {
@@ -85,8 +87,7 @@ async function anular(s) {
   if (motivo.length < 5) return avisar('error', 'Escribe el motivo de la anulación.')
   const { error } = await supabase.from('sanciones').update({ estado: 'anulada', motivo_anulacion: motivo }).eq('id', s.id)
   if (error) return avisar('error', traducirError(error).mensaje)
-  avisar('exito', 'Sanción anulada.')
-  abrir(persona.value.id)
+  if (await abrir(persona.value.id)) avisar('exito', 'Sanción anulada.')
 }
 
 buscar()
@@ -97,7 +98,7 @@ buscar()
     <div class="admin-cabeza">
       <div><h1>Personas</h1><p>{{ total }} inscrita(s). Los datos completos solo se ven al abrir una persona.</p></div>
     </div>
-    <p v-if="mensaje.texto" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
+    <p v-if="mensaje.texto && !persona" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
 
     <form class="filtros" @submit.prevent="buscar(0)">
       <label class="campo"><span>Documento o nombre</span><input v-model="busqueda.texto" autocomplete="off" /></label>
@@ -125,11 +126,7 @@ buscar()
       <button class="boton boton--contorno boton--pequeno" type="button" :disabled="pagina + 1 >= paginas" @click="buscar(pagina + 1)">Siguiente</button>
     </div>
 
-    <div v-if="persona" class="tarjeta-base ficha">
-      <div class="admin-cabeza">
-        <h2>{{ persona.nombres }} {{ persona.apellidos }}</h2>
-        <button class="boton boton--contorno boton--pequeno" type="button" @click="persona = null">Cerrar</button>
-      </div>
+    <Dialogo v-if="persona" :titulo="`${persona.nombres} ${persona.apellidos}`" :aviso="mensaje" amplio @cerrar="persona = null">
       <dl class="datos">
         <dt>Documento</dt><dd>{{ persona.tipo_documento }} {{ persona.numero_documento }}</dd>
         <dt>Celular</dt><dd>{{ persona.telefono }}</dd>
@@ -177,14 +174,12 @@ buscar()
           <td>{{ h.duracion_min != null ? `${h.duracion_min} min` : '—' }}</td><td>{{ h.estado }}<template v-if="h.con_novedad"> · novedad</template></td>
         </tr></tbody>
       </table>
-    </div>
+    </Dialogo>
   </section>
 </template>
 
 <style scoped>
-.ficha { border: 2px solid var(--secundario); }
-.ficha h2 { margin: 0; }
-.ficha h3 { margin-top: var(--esp-5); font-size: var(--texto-m); }
+h3 { margin-top: var(--esp-5); font-size: var(--texto-m); }
 .datos { display: grid; grid-template-columns: auto 1fr; gap: var(--esp-1) var(--esp-4); margin: 0; }
 .datos dt { color: var(--tinta-2); }
 .datos dd { margin: 0; }

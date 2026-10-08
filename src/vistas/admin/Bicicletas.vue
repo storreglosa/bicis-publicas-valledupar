@@ -3,6 +3,7 @@
 // (operativa, averiada, en reparación, extraviada, baja), novedades abiertas e
 // historial. La disponibilidad y la ubicación solo cambian por funciones auditadas.
 import { computed, ref } from 'vue'
+import Dialogo from '../../componentes/admin/Dialogo.vue'
 import { useConsulta } from '../../composables/useConsulta.js'
 import { traducirError } from '../../lib/errores.js'
 import { supabase } from '../../lib/supabase.js'
@@ -52,6 +53,7 @@ async function crear() {
 }
 
 async function abrir(b) {
+  avisar('', '')
   elegida.value = { ...b }
   cambio.value = { condicion: b.condicion, motivo: '', punto: '' }
   resolucion.value = {}
@@ -108,7 +110,7 @@ async function cerrarNovedad(n) {
       </div>
     </div>
 
-    <p v-if="mensaje.texto" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
+    <p v-if="mensaje.texto && !elegida" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
 
     <details class="tarjeta-base" :open="resumen.total === 0">
       <summary><strong>Dar de alta bicis</strong> (por número de sticker)</summary>
@@ -153,11 +155,9 @@ async function cerrarNovedad(n) {
       </table>
     </div>
 
-    <div v-if="elegida" class="tarjeta-base gestion">
-      <div class="admin-cabeza">
-        <h2>{{ elegida.codigo }}</h2>
-        <button class="boton boton--contorno boton--pequeno" type="button" @click="elegida = null">Cerrar</button>
-      </div>
+    <Dialogo v-if="elegida" :titulo="elegida.codigo" :aviso="mensaje" amplio @cerrar="elegida = null">
+      <p class="nota">{{ DISPONIBILIDAD[elegida.disponibilidad] }} · {{ CONDICIONES[elegida.condicion] }} ·
+        {{ elegida.disponibilidad === 'prestada' ? 'En préstamo' : nombrePunto(elegida.punto_actual_id) }}</p>
 
       <h3>Condición física</h3>
       <form class="fila-campos" @submit.prevent="cambiarCondicion">
@@ -206,16 +206,15 @@ async function cerrarNovedad(n) {
           <td>{{ h.estado }}<template v-if="h.con_novedad"> · con novedad</template></td>
         </tr></tbody>
       </table>
-    </div>
+    </Dialogo>
   </section>
 </template>
 
 <style scoped>
 summary { cursor: pointer; min-height: var(--toque-min); display: flex; align-items: center; gap: var(--esp-2); }
 .alta { margin-top: var(--esp-3); }
-.gestion { border: 2px solid var(--secundario); }
-.gestion h2 { margin: 0; }
-.gestion h3 { margin-top: var(--esp-5); font-size: var(--texto-m); }
+h3 { margin-top: var(--esp-5); font-size: var(--texto-m); }
+h3:first-of-type { margin-top: var(--esp-3); }
 .nota { color: var(--tinta-2); font-size: var(--texto-s); }
 .novedad { background: var(--aviso-fondo); border-radius: var(--radio-m); padding: var(--esp-3); margin-bottom: var(--esp-3); }
 .novedad p { margin: 0 0 var(--esp-2); }

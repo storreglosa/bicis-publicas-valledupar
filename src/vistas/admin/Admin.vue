@@ -56,7 +56,7 @@ const secciones = [
 .filtros { display: flex; flex-wrap: wrap; gap: var(--esp-3); align-items: end; margin-bottom: var(--esp-4); }
 .filtros .campo { margin-bottom: 0; min-width: 10rem; }
 .boton--pequeno { min-height: 36px; padding: 0 var(--esp-3); font-size: var(--texto-s); }
-.dialogo { border: 0; border-radius: var(--radio-l); padding: var(--esp-5); max-width: min(36rem, 92vw); box-shadow: var(--sombra); }
-.dialogo::backdrop { background: rgba(34, 28, 23, 0.45); }
+/* El resultado de una acción sigue a la vista aunque el usuario esté al final de una lista larga. */
+.admin__contenido > section > .mensaje { position: sticky; top: var(--esp-2); z-index: 2; box-shadow: var(--sombra); }
 .vacio { color: var(--tinta-2); padding: var(--esp-4) 0; }
 </style>

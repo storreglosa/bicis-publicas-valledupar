@@ -37,10 +37,11 @@ const anio = new Date().getFullYear()
           <li><RouterLink to="/reglas">Reglas</RouterLink></li>
           <li><RouterLink to="/eventos">Eventos</RouterLink></li>
           <li v-if="!sesion.perfil"><RouterLink to="/inscribirme" class="menu__destacado">Inscribirme</RouterLink></li>
+          <li v-if="!sesion.perfil"><RouterLink to="/ingresar" class="menu__boton">Ingreso del personal</RouterLink></li>
           <template v-if="sesion.perfil">
             <li><RouterLink to="/operador" class="menu__destacado">Turno</RouterLink></li>
             <li v-if="sesion.perfil.rol === 'administrador'"><RouterLink to="/admin" class="menu__destacado">Administración</RouterLink></li>
-            <li><button type="button" class="menu__salir" @click="cerrarTurno">Cerrar turno</button></li>
+            <li><button type="button" class="menu__boton" @click="cerrarTurno">Cerrar turno</button></li>
           </template>
         </ul>
       </nav>
@@ -124,10 +125,14 @@ const anio = new Date().getFullYear()
 }
 .menu a.router-link-active { color: var(--primario); text-decoration: underline; }
 .menu__destacado { color: var(--primario) !important; }
-.menu__salir {
-  min-height: var(--toque-min); padding: 0 var(--esp-3); border: 2px solid var(--linea-fuerte); border-radius: var(--radio-m);
-  background: var(--superficie); color: var(--tinta-1); font: inherit; font-weight: 600; cursor: pointer;
+/* Acciones del personal (ingresar / cerrar turno): botón con borde, separado de los enlaces ciudadanos. */
+.menu .menu__boton {
+  display: inline-flex; align-items: center; min-height: var(--toque-min); padding: 0 var(--esp-3);
+  border: 2px solid var(--linea-fuerte); border-radius: var(--radio-m);
+  background: var(--superficie); color: var(--tinta-1); font: inherit; font-weight: 600; cursor: pointer; text-decoration: none;
 }
+.menu .menu__boton:hover { border-color: var(--primario); }
+.menu a.menu__boton.router-link-active { color: var(--tinta-1); text-decoration: none; border-color: var(--primario); }
 
 main { min-height: 60vh; outline: none; }
 

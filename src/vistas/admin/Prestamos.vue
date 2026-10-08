@@ -4,6 +4,7 @@
 // siempre con motivo y auditadas) y exportación CSV (utf-8-sig) seudonimizada por
 // defecto. Incluir nombres y documentos exige un motivo y queda en la bitácora.
 import { computed, ref } from 'vue'
+import Dialogo from '../../componentes/admin/Dialogo.vue'
 import { useConsulta } from '../../composables/useConsulta.js'
 import { aCsv, descargarCsv } from '../../lib/csv.js'
 import { traducirError } from '../../lib/errores.js'
@@ -23,6 +24,12 @@ const exportar = ref({ conDatos: false, motivo: '' })
 const cPuntos = useConsulta((sb) => sb.from('puntos').select('id,codigo,nombre,estado').neq('estado', 'cerrado').order('codigo'))
 const ESTADOS = { activo: 'Activo', finalizado: 'Finalizado', no_devuelto: 'No devuelto', anulado: 'Anulado' }
 const truncado = computed(() => filas.value.length >= LIMITE)
+const TITULOS = { anular: 'Anular préstamo', forzar: 'Forzar devolución', no_devuelto: 'Cerrar como no devuelto' }
+
+function abrirAccion(tipo, fila) {
+  avisar('', '')
+  accion.value = { tipo, fila, motivo: '', punto: '' }
+}
 
 function avisar(tipo, texto) { mensaje.value = { tipo, texto } }
 
@@ -94,7 +101,7 @@ cargar()
     <div class="admin-cabeza">
       <div><h1>Préstamos</h1><p>{{ filas.length }} préstamo(s) en el periodo{{ truncado ? ` (se muestran los ${LIMITE} más recientes)` : '' }}.</p></div>
     </div>
-    <p v-if="mensaje.texto" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
+    <p v-if="mensaje.texto && !accion" class="mensaje" :class="`mensaje--${mensaje.tipo}`" role="status"><span>{{ mensaje.texto }}</span></p>
 
     <form class="filtros" @submit.prevent="cargar">
       <label class="campo"><span>Desde</span><input v-model="filtro.desde" type="date" /></label>
@@ -105,9 +112,8 @@ cargar()
       <button class="boton" type="submit">Filtrar</button>
     </form>
 
-    <div v-if="accion" class="tarjeta-base accion">
-      <h2>{{ { anular: 'Anular préstamo', forzar: 'Forzar devolución', no_devuelto: 'Cerrar como no devuelto' }[accion.tipo] }}
-        · {{ accion.fila.bici_codigo }}</h2>
+    <Dialogo v-if="accion" :titulo="`${TITULOS[accion.tipo]} · ${accion.fila.bici_codigo}`" :aviso="mensaje" @cerrar="accion = null">
+      <p>{{ accion.fila.nombres }} {{ accion.fila.apellidos?.charAt(0) }}. · salió de {{ accion.fila.punto_salida }} el {{ fechaHora(accion.fila.salida_en) }}</p>
       <p class="nota" v-if="accion.tipo === 'anular'">Para préstamos registrados por error: la bici vuelve al punto de salida.</p>
       <p class="nota" v-if="accion.tipo === 'no_devuelto'">La bici queda «extraviada» y se abre una incidencia de pérdida; la foto se conserva.</p>
       <label v-if="accion.tipo === 'forzar'" class="campo"><span>Punto donde quedó la bici</span>
@@ -118,7 +124,7 @@ cargar()
         <button class="boton" type="button" :disabled="accion.motivo.trim().length < 10 || (accion.tipo === 'forzar' && !accion.punto)" @click="ejecutar">Confirmar</button>
         <button class="boton boton--contorno" type="button" @click="accion = null">Cancelar</button>
       </div>
-    </div>
+    </Dialogo>
 
     <p v-if="cargando">Cargando…</p>
     <div v-else class="tabla-desplazable">
@@ -135,9 +141,9 @@ cargar()
               <span v-else>borrada</span></td>
             <td class="botones">
               <template v-if="f.estado === 'activo'">
-                <button class="boton boton--contorno boton--pequeno" type="button" @click="accion = { tipo: 'forzar', fila: f, motivo: '', punto: '' }">Forzar devolución</button>
-                <button class="boton boton--contorno boton--pequeno" type="button" @click="accion = { tipo: 'anular', fila: f, motivo: '' }">Anular</button>
-                <button class="boton boton--contorno boton--pequeno" type="button" @click="accion = { tipo: 'no_devuelto', fila: f, motivo: '' }">No devuelto</button>
+                <button class="boton boton--contorno boton--pequeno" type="button" @click="abrirAccion('forzar', f)">Forzar devolución</button>
+                <button class="boton boton--contorno boton--pequeno" type="button" @click="abrirAccion('anular', f)">Anular</button>
+                <button class="boton boton--contorno boton--pequeno" type="button" @click="abrirAccion('no_devuelto', f)">No devuelto</button>
               </template>
             </td>
           </tr>
@@ -159,7 +165,6 @@ cargar()
 
 <style scoped>
 h2 { font-size: var(--texto-l); margin-top: 0; }
-.accion { border: 2px solid var(--estado-pocas); }
 .nota { color: var(--tinta-2); font-size: var(--texto-s); }
 .botones { display: flex; flex-wrap: wrap; gap: var(--esp-1); }
 .mensaje { margin-bottom: var(--esp-4); }

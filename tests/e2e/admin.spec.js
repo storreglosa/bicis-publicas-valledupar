@@ -34,6 +34,24 @@ const PRESTAMOS = [{
   operador_salida: 'Operador Demo', operador_devolucion: 'Operador Demo', motivo_cierre: null,
 }]
 
+const BICIS = Array.from({ length: 130 }, (_, i) => ({
+  id: `b-${i + 1}`, numero: i + 1, codigo: `BPV-${String(i + 1).padStart(3, '0')}`, disponibilidad: 'disponible',
+  condicion: 'operativa', punto_actual_id: 'p1', marca: null, modelo: null, color: null, talla: null, numero_serie: null,
+  fecha_ingreso: null, nota_operativa: null, ultimo_movimiento_en: AHORA,
+}))
+
+const EVENTOS = [{
+  id: 'ev-1', nombre: 'Ciclopaseo (demo)', descripcion: null, lugar_texto: 'Balneario (demo)',
+  inicia_en: '2026-10-20T07:00:00-05:00', termina_en: '2026-10-20T12:00:00-05:00', estado: 'planeado', publicado: true,
+}]
+
+const PUNTOS = [
+  { id: 'p1', codigo: 'P01', nombre: 'Plaza (demo)', tipo: 'fijo', estado: 'activo', evento_id: null, latitud: 10.477751,
+    longitud: -73.244632, direccion: null, horario_texto: null, capacidad: null, notas_internas: null },
+  { id: 'p9', codigo: 'E01', nombre: 'Balneario (demo)', tipo: 'evento', estado: 'activo', evento_id: 'ev-1', latitud: 10.49,
+    longitud: -73.26, direccion: null, horario_texto: null, capacidad: null, notas_internas: null },
+]
+
 async function simular(page, { rol = 'administrador', llamadas = [] } = {}) {
   const json = (r, cuerpo, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(cuerpo) })
   await page.route('**/auth/v1/token**', (r) => json(r, {
@@ -57,7 +75,18 @@ async function simular(page, { rol = 'administrador', llamadas = [] } = {}) {
     return json(r, PARAMETROS)
   })
   await page.route('**/rest/v1/v_prestamos_admin**', (r) => json(r, PRESTAMOS))
-  await page.route('**/rest/v1/puntos**', (r) => json(r, [{ id: 'p1', codigo: 'P01', nombre: 'Plaza (demo)', tipo: 'fijo', estado: 'activo' }]))
+  await page.route('**/rest/v1/bicicletas**', (r) => json(r, BICIS))
+  await page.route('**/rest/v1/incidencias**', (r) => json(r, []))
+  await page.route('**/tile.openstreetmap.org/**', (r) => r.abort())
+  // Altas y ediciones: se registran y se responde como PostgREST.
+  for (const tabla of ['puntos', 'eventos']) {
+    await page.route(`**/rest/v1/${tabla}**`, (r) => {
+      const metodo = r.request().method()
+      if (metodo === 'GET') return json(r, tabla === 'puntos' ? PUNTOS : EVENTOS)
+      llamadas.push({ fn: `${metodo} ${tabla}`, cuerpo: r.request().postDataJSON(), url: r.request().url() })
+      return metodo === 'POST' && tabla === 'eventos' ? json(r, { id: 'ev-nuevo' }, 201) : r.fulfill({ status: 204, body: '' })
+    })
+  }
 }
 
 async function ingresar(page, destino) {
@@ -138,4 +167,132 @@ test('un operador no entra a la administración', async ({ page }) => {
   await ingresar(page, '/admin')
   await expect(page.getByRole('heading', { name: 'Turno del operador' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Administración' })).toHaveCount(0)
+})
+
+// Las ventanas de edición se abren encima de la página, donde esté el usuario. Antes
+// el panel de «Gestionar» quedaba ~7.400 px más abajo (tras 130 filas) y el de
+// «Editar evento» arriba, fuera de la vista: los botones parecían no hacer nada.
+test.describe('ventanas de edición (pantalla de portátil)', () => {
+  test.use({ viewport: { width: 1366, height: 768 } })
+
+  test('bicicletas: «Gestionar» abre la ficha a la vista; Esc la cierra y el foco vuelve', async ({ page }) => {
+    await simular(page)
+    await ingresar(page, '/admin/bicicletas')
+    const boton = page.getByRole('row', { name: /BPV-001/ }).getByRole('button', { name: 'Gestionar' })
+    await boton.click()
+    const ficha = page.getByRole('dialog', { name: 'BPV-001' })
+    await expect(ficha).toBeInViewport()
+    await expect(ficha.getByRole('heading', { name: 'Condición física' })).toBeVisible()
+    await page.screenshot({ path: 'capturas/e2e-admin-3-gestionar-bici.png' })
+    await page.keyboard.press('Escape')
+    await expect(ficha).toHaveCount(0)
+    await expect(boton).toBeFocused()
+  })
+
+  test('eventos: el nuevo evento trae el mapa y crea el evento y luego su punto', async ({ page }) => {
+    const llamadas = []
+    await simular(page, { llamadas })
+    await ingresar(page, '/admin/puntos')
+    await page.getByRole('button', { name: 'Nuevo evento' }).click()
+    const ventana = page.getByRole('dialog', { name: 'Nuevo evento' })
+    await expect(ventana).toBeInViewport()
+    await ventana.getByLabel('Nombre del evento').fill('Ciclopaseo nocturno (demo)')
+    await ventana.getByLabel('Inicia (hora de Colombia)').fill('2026-10-25T18:00')
+    await ventana.getByLabel('Termina').fill('2026-10-25T22:00')
+    await ventana.getByText('Publicado (aparece').click()
+    await expect(ventana.getByLabel('Código del punto (se imprime; no cambia)')).toHaveValue('E02')          // siguiente a E01
+    await expect(ventana.getByText('Para guardar falta ubicar el punto de préstamo en el mapa.')).toBeVisible()
+    await ventana.locator('.leaflet-container').click()                                  // centro del mapa
+    await expect(ventana.getByLabel('Latitud')).not.toHaveValue('')
+    await page.screenshot({ path: 'capturas/e2e-admin-4-nuevo-evento.png' })
+    await ventana.getByRole('button', { name: 'Guardar evento' }).click()
+    await expect(page.getByText('Evento «Ciclopaseo nocturno (demo)» guardado con su punto E02.')).toBeVisible()
+
+    const escrituras = llamadas.filter((l) => l.fn.startsWith('POST'))
+    expect(escrituras.map((l) => l.fn)).toEqual(['POST eventos', 'POST puntos'])
+    expect(escrituras[0].cuerpo).toMatchObject({ nombre: 'Ciclopaseo nocturno (demo)', publicado: true,
+      inicia_en: '2026-10-25T18:00:00-05:00', termina_en: '2026-10-25T22:00:00-05:00' })
+    const punto = escrituras[1].cuerpo
+    expect(punto).toMatchObject({ codigo: 'E02', tipo: 'evento', evento_id: 'ev-nuevo', estado: 'activo',
+      nombre: 'Ciclopaseo nocturno (demo)' })
+    expect(punto.latitud).toBeGreaterThan(10.3)
+    expect(punto.latitud).toBeLessThan(10.6)
+    expect(punto.longitud).toBeGreaterThan(-73.4)
+    expect(punto.longitud).toBeLessThan(-73.1)
+  })
+
+  test('eventos: «Editar» desde la tabla de abajo abre el evento con sus puntos', async ({ page }) => {
+    const llamadas = []
+    await simular(page, { llamadas })
+    const otros = ['P02', 'P03', 'P04', 'T01'].map((c, i) => ({ ...PUNTOS[0], id: `px${i}`, codigo: c }))
+    await page.route('**/rest/v1/puntos**', (r) => (r.request().method() === 'GET'
+      ? r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([...PUNTOS, ...otros]) }) : r.fallback()))
+    await ingresar(page, '/admin/puntos')
+    await page.locator('table').nth(1).getByRole('button', { name: 'Editar' }).click()
+    const ventana = page.getByRole('dialog', { name: 'Editar evento: Ciclopaseo (demo)' })
+    await expect(ventana).toBeInViewport()
+    await expect(ventana.getByLabel('Inicia (hora de Colombia)')).toHaveValue('2026-10-20T07:00')
+    await expect(ventana.getByText('E01')).toBeVisible()
+    await ventana.getByRole('button', { name: 'Agregar otro punto en el mapa' }).click()
+    await expect(ventana.locator('.leaflet-container')).toBeVisible()
+    await ventana.getByRole('button', { name: 'No agregar este punto' }).click()
+    await ventana.getByLabel('Termina').fill('2026-10-20T13:00')
+    await ventana.getByRole('button', { name: 'Guardar evento' }).click()
+    await expect.poll(() => llamadas.find((l) => l.fn === 'PATCH eventos')).toBeTruthy()
+    const patch = llamadas.find((l) => l.fn === 'PATCH eventos')
+    expect(patch.cuerpo.termina_en).toBe('2026-10-20T13:00:00-05:00')
+    expect(decodeURIComponent(patch.url)).toContain('id=eq.ev-1')
+    expect(llamadas.some((l) => l.fn === 'POST puntos')).toBe(false)
+  })
+})
+
+test.describe('ventanas de préstamos y personas (pantalla de portátil)', () => {
+  test.use({ viewport: { width: 1366, height: 768 } })
+
+  test('préstamos: «Anular» abre la ventana a la vista y envía el motivo', async ({ page }) => {
+    const llamadas = []
+    await simular(page, { llamadas })
+    const activos = Array.from({ length: 30 }, (_, i) => ({ ...PRESTAMOS[0], id: `pr-a${i}`, estado: 'activo', devuelto_en: null,
+      duracion_min: null, bici_codigo: `BPV-${String(i + 10).padStart(3, '0')}`, bici_numero: i + 10 }))
+    await page.route('**/rest/v1/v_prestamos_admin**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(activos) }))
+    await ingresar(page, '/admin/prestamos')
+    await page.getByRole('row', { name: /BPV-039/ }).getByRole('button', { name: 'Anular' }).click()
+    const ventana = page.getByRole('dialog', { name: 'Anular préstamo · BPV-039' })
+    await expect(ventana).toBeInViewport()
+    await ventana.getByLabel('Motivo (queda en la auditoría)').fill('Registrado por error en la prueba')
+    await ventana.getByRole('button', { name: 'Confirmar' }).click()
+    await expect.poll(() => llamadas.find((l) => l.fn === 'anular_prestamo')).toBeTruthy()
+    expect(llamadas.find((l) => l.fn === 'anular_prestamo').cuerpo.p_prestamo_id).toBe('pr-a29')
+    await expect(ventana).toHaveCount(0)
+  })
+
+  test('personas: «Abrir» muestra la ficha a la vista', async ({ page }) => {
+    await simular(page)
+    const persona = { id: 'per-1', tipo_documento: 'CC', numero_documento: '00100001', nombres: 'Ana', apellidos: 'Prueba',
+      estado: 'validada', origen: 'punto', creada_en: AHORA, telefono: '3001234567', correo: null, edad_declarada: 30,
+      edad_declarada_en: '2026-10-07', sexo_genero: 'mujer', acudiente_id: null, acudiente_parentesco: null, validada_en: AHORA }
+    await page.route('**/rest/v1/personas**', (r) => {
+      const una = (r.request().headers().accept ?? '').includes('vnd.pgrst.object')
+      return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(una ? persona : Array(50).fill(persona)) })
+    })
+    for (const t of ['autorizaciones_datos', 'sanciones']) {
+      await page.route(`**/rest/v1/${t}**`, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+    }
+    await ingresar(page, '/admin/personas')
+    await page.getByRole('button', { name: 'Abrir' }).first().click()
+    const ficha = page.getByRole('dialog', { name: 'Ana Prueba' })
+    await expect(ficha).toBeInViewport()
+    await expect(ficha.getByText('CC 00100001')).toBeVisible()
+  })
+})
+
+test('el ingreso del personal está en la cabecera, también en el celular', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await page.goto('#/')
+  const enlace = page.getByRole('banner').getByRole('link', { name: 'Ingreso del personal' })
+  await expect(enlace).toBeInViewport()
+  await page.screenshot({ path: 'capturas/e2e-cabecera-movil.png' })
+  await enlace.click()
+  await expect(page.getByLabel('Correo')).toBeVisible()
 })

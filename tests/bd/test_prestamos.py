@@ -427,3 +427,20 @@ def test_m2_menor_preinscrito_por_web_no_presta_sin_autorizacion_presencial(bd):
     bd.rpc("validar_persona", p_persona_id=menor, p_autorizacion={
         "politica_version": "0.1", "autoriza_tratamiento": True, "autoriza_foto": True, "menor_escuchado": True})
     bd.prestar(menor, 1)
+
+
+def test_el_admin_crea_un_evento_con_su_punto_como_lo_hace_el_panel(bd):
+    """Panel → Nuevo evento: inserta el evento pidiendo su id de vuelta (return=representation:
+    exige que el admin vea la fila que acaba de crear) y luego el punto del evento con ese id.
+    El punto entra al mapa público solo cuando el evento se publica."""
+    bd.como(bd.d.admin)
+    evento = bd.uno("insert into public.eventos (nombre, inicia_en, termina_en, estado, publicado) "
+                    "values ('Ciclopaseo nocturno', now() + interval '1 day', now() + interval '1 day 4 hours', "
+                    "'planeado', false) returning id")
+    assert evento is not None
+    bd.sql("insert into public.puntos (codigo, tipo, nombre, estado, evento_id, latitud, longitud) "
+           "values ('EZ9', 'evento', 'Ciclopaseo nocturno', 'activo', %s, 10.477751, -73.244632)", (evento,))
+    visible = "select visible, abierto from public.disponibilidad_puntos where codigo = 'EZ9'"
+    assert bd.sql(visible) == [(False, False)]
+    bd.sql("update public.eventos set publicado = true where id = %s", (evento,))
+    assert bd.sql(visible) == [(True, False)]          # se ve en el mapa; se presta cuando esté en curso
