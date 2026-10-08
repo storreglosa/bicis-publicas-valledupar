@@ -34,8 +34,11 @@ AUTH_FUNCIONES = {
     "cerrar_punto_evento", "crear_bicicletas", "forzar_devolucion", "marcar_clave_cambiada",
     "mi_perfil", "mover_bicis", "prestamos_activos", "publicar_politica", "registrar_autorizacion",
     "registrar_devolucion", "registrar_exportacion", "registrar_persona_en_punto", "registrar_prestamo",
-    "tablero_resumen", "validar_persona", "vincular_personal",
+    "tablero_resumen", "validar_persona", "vincular_personal", "conservar_foto",
 }
+
+# La clave secreta (Edge Functions preinscribir y purgar-fotos) solo ejecuta esto y no toca tablas.
+SERVICIO_FUNCIONES = {"preinscribir", "fotos_por_purgar", "marcar_fotos_eliminadas", "fotos_huerfanas", "registrar_tarea"}
 
 
 def _privilegios_tabla(bd, rol):
@@ -85,8 +88,8 @@ def test_nadie_de_la_api_escribe_columnas_sueltas_salvo_el_admin_autenticado(bd)
         assert escribibles == [], (rol, escribibles)
 
 
-def test_service_role_solo_ejecuta_preinscribir_y_no_toca_tablas(bd):
-    assert _funciones(bd, "service_role") == {"preinscribir"}
+def test_service_role_solo_ejecuta_sus_funciones_y_no_toca_tablas(bd):
+    assert _funciones(bd, "service_role") == SERVICIO_FUNCIONES
     assert _funciones(bd, "service_role", "privado") == set()
     assert _privilegios_tabla(bd, "service_role") == set()
 

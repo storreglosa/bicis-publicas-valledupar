@@ -70,6 +70,16 @@ export const MENSAJES = {
   limite_prestamos_dia: 'Esta persona ya alcanzó el máximo de préstamos de hoy.',
   id_operacion_reutilizado: 'Esta operación ya se registró con otros datos. Recarga la página e inténtalo de nuevo.',
   prestamo_no_existe: 'Ese préstamo no existe.',
+  foto_ya_eliminada: 'La foto de ese préstamo ya se borró por la política de retención: no se puede conservar.',
+
+  // Preinscripción pública (Edge Function preinscribir)
+  demasiados_intentos: 'Se hicieron demasiados intentos de inscripción desde esta conexión. Espera una hora e inténtalo de nuevo, o inscríbete directamente en un punto.',
+  verificacion_fallida: 'No pudimos confirmar que no eres un robot. Recarga la página e inténtalo de nuevo.',
+  verificacion_no_disponible: 'La verificación anti-robots no responde en este momento. Inténtalo de nuevo en unos minutos.',
+  origen_no_permitido: 'Esta inscripción solo funciona desde la página oficial del sistema.',
+  solicitud_demasiado_grande: 'Los datos enviados son demasiado largos. Revisa los campos e inténtalo de nuevo.',
+  metodo_no_permitido: 'La solicitud no es válida. Recarga la página e inténtalo de nuevo.',
+  error_interno: 'No pudimos completar la inscripción por un problema del sistema. Inténtalo más tarde o inscríbete directamente en un punto.',
   prestamo_no_activo: 'Ese préstamo ya no está activo.',
   motivo_insuficiente: 'Escribe un motivo más detallado.',
   texto_demasiado_largo: 'El texto es demasiado largo. Resúmelo en menos de 500 caracteres.',

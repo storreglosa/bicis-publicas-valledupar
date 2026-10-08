@@ -19,6 +19,7 @@ Todos los datos son ficticios (documentos que empiezan por 00, teléfonos 300000
 import json
 import os
 import pathlib
+import secrets
 import subprocess
 import uuid
 from dataclasses import dataclass, field
@@ -183,6 +184,10 @@ class Sesion:
         return filas[0][0] if filas else None
 
     def rpc(self, nombre: str, **kw):
+        if nombre == "preinscribir":
+            # La Edge Function siempre manda la huella de la IP. Las pruebas que no
+            # prueban el límite de intentos usan una huella distinta en cada llamada.
+            kw.setdefault("p_ip_huella", secrets.token_hex(32))
         kw = {k: (Jsonb(v) if isinstance(v, (dict, list)) and not k.endswith("numeros") else v) for k, v in kw.items()}
         args = ", ".join(f"{k} => %({k})s" for k in kw)
         try:

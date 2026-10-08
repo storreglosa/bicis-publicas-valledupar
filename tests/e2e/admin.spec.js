@@ -266,6 +266,19 @@ test.describe('ventanas de préstamos y personas (pantalla de portátil)', () =>
     await expect(ventana).toHaveCount(0)
   })
 
+  test('préstamos: «Conservar» la foto pide motivo y llama a conservar_foto', async ({ page }) => {
+    const llamadas = []
+    await simular(page, { llamadas })
+    await ingresar(page, '/admin/prestamos')
+    await page.getByRole('row', { name: /BPV-003/ }).getByRole('button', { name: 'Conservar' }).click()
+    const ventana = page.getByRole('dialog', { name: 'Conservar foto · BPV-003' })
+    await expect(ventana).toBeInViewport()
+    await ventana.getByLabel('Motivo (queda en la auditoría)').fill('Reclamo de la persona en trámite')
+    await ventana.getByRole('button', { name: 'Confirmar' }).click()
+    await expect.poll(() => llamadas.find((l) => l.fn === 'conservar_foto')).toBeTruthy()
+    expect(llamadas.find((l) => l.fn === 'conservar_foto').cuerpo).toEqual({ p_prestamo_id: 'pr-1', p_motivo: 'Reclamo de la persona en trámite' })
+  })
+
   test('personas: «Abrir» muestra la ficha a la vista', async ({ page }) => {
     await simular(page)
     const persona = { id: 'per-1', tipo_documento: 'CC', numero_documento: '00100001', nombres: 'Ana', apellidos: 'Prueba',

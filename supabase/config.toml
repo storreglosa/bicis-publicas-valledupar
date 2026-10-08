@@ -1,0 +1,12 @@
+# Configuración de la CLI de Supabase. Solo se usa para publicar las Edge Functions
+# (scripts/desplegar_funciones.sh); el esquema va por scripts/migrar.sh.
+project_id = "bicis-publicas-valledupar"
+
+# Ninguna de las dos recibe el token de un usuario: preinscribir la llama un
+# visitante (la protegen Turnstile y el límite de intentos) y purgar-fotos la
+# llama pg_cron con la cabecera x-clave-cron.
+[functions.preinscribir]
+verify_jwt = false
+
+[functions.purgar-fotos]
+verify_jwt = false

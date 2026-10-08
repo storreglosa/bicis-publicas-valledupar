@@ -10,6 +10,7 @@ export default defineConfig({
   testDir: 'tests/e2e',
   timeout: 120_000,
   expect: { timeout: 15_000 },   // equipo lento: la espera por defecto (5 s) da falsos negativos
+  workers: 2,                    // WSL con ~4 GB: más navegadores a la vez no alcanzan a arrancar
   reporter: 'list',
   use: {
     baseURL: process.env.BASE_URL ?? 'http://localhost:4174/bicis-publicas-valledupar/',

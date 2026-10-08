@@ -13,7 +13,7 @@ const rutas = [
   { path: '/mapa', name: 'mapa', component: () => import('./vistas/publico/Mapa.vue'), meta: { titulo: 'Mapa de puntos' } },
   { path: '/reglas', name: 'reglas', component: () => import('./vistas/publico/Reglas.vue'), meta: { titulo: 'Reglas de uso' } },
   { path: '/eventos', name: 'eventos', component: () => import('./vistas/publico/Eventos.vue'), meta: { titulo: 'Eventos' } },
-  { path: '/inscribirme', name: 'inscribirme', component: enConstruccion, meta: { titulo: 'Inscribirme' } },
+  { path: '/inscribirme', name: 'inscribirme', component: () => import('./vistas/publico/Inscribirme.vue'), meta: { titulo: 'Inscribirme' } },
   { path: '/politica-de-datos/:version?', name: 'politica', component: () => import('./vistas/publico/Politica.vue'), meta: { titulo: 'Política de tratamiento de datos' } },
   { path: '/b/:codigo', name: 'bici', component: () => import('./vistas/publico/Bici.vue'), meta: { titulo: 'Bicicleta' } },
 

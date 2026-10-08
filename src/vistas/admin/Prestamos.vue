@@ -24,7 +24,7 @@ const exportar = ref({ conDatos: false, motivo: '' })
 const cPuntos = useConsulta((sb) => sb.from('puntos').select('id,codigo,nombre,estado').neq('estado', 'cerrado').order('codigo'))
 const ESTADOS = { activo: 'Activo', finalizado: 'Finalizado', no_devuelto: 'No devuelto', anulado: 'Anulado' }
 const truncado = computed(() => filas.value.length >= LIMITE)
-const TITULOS = { anular: 'Anular préstamo', forzar: 'Forzar devolución', no_devuelto: 'Cerrar como no devuelto' }
+const TITULOS = { anular: 'Anular préstamo', forzar: 'Forzar devolución', no_devuelto: 'Cerrar como no devuelto', conservar: 'Conservar foto' }
 
 function abrirAccion(tipo, fila) {
   avisar('', '')
@@ -58,10 +58,14 @@ async function ejecutar() {
     ? supabase.rpc('anular_prestamo', { p_prestamo_id: a.fila.id, p_motivo: a.motivo })
     : a.tipo === 'forzar'
       ? supabase.rpc('forzar_devolucion', { p_prestamo_id: a.fila.id, p_punto_id: a.punto, p_motivo: a.motivo })
-      : supabase.rpc('cerrar_no_devuelto', { p_prestamo_id: a.fila.id, p_motivo: a.motivo })
+      : a.tipo === 'conservar'
+        ? supabase.rpc('conservar_foto', { p_prestamo_id: a.fila.id, p_motivo: a.motivo })
+        : supabase.rpc('cerrar_no_devuelto', { p_prestamo_id: a.fila.id, p_motivo: a.motivo })
   const { error } = await llamada
   if (error) return avisar('error', traducirError(error).mensaje)
-  avisar('exito', `Préstamo de la ${a.fila.bici_codigo} actualizado.`)
+  avisar('exito', a.tipo === 'conservar'
+    ? `La foto del préstamo de la ${a.fila.bici_codigo} se conservará: la purga automática no la borra.`
+    : `Préstamo de la ${a.fila.bici_codigo} actualizado.`)
   accion.value = null
   cargar()
 }
@@ -116,6 +120,8 @@ cargar()
       <p>{{ accion.fila.nombres }} {{ accion.fila.apellidos?.charAt(0) }}. · salió de {{ accion.fila.punto_salida }} el {{ fechaHora(accion.fila.salida_en) }}</p>
       <p class="nota" v-if="accion.tipo === 'anular'">Para préstamos registrados por error: la bici vuelve al punto de salida.</p>
       <p class="nota" v-if="accion.tipo === 'no_devuelto'">La bici queda «extraviada» y se abre una incidencia de pérdida; la foto se conserva.</p>
+      <p class="nota" v-if="accion.tipo === 'conservar'">La purga automática no borrará esta foto. Úsalo ante un reclamo o un daño
+        descubierto después de la devolución.</p>
       <label v-if="accion.tipo === 'forzar'" class="campo"><span>Punto donde quedó la bici</span>
         <select v-model="accion.punto"><option value="" disabled>Elige…</option>
           <option v-for="p in cPuntos.datos.value ?? []" :key="p.id" :value="p.id">{{ p.codigo }} · {{ p.nombre }}</option></select></label>
@@ -137,7 +143,11 @@ cargar()
             <td>{{ f.punto_salida }} → {{ f.punto_devolucion ?? '—' }}</td>
             <td>{{ f.duracion_min != null ? duracion(f.duracion_min) : '—' }}</td>
             <td>{{ ESTADOS[f.estado] }}<template v-if="f.con_novedad"> · novedad</template><template v-if="f.devolucion_forzada"> · forzada</template></td>
-            <td><button v-if="f.foto_estado === 'almacenada'" class="boton boton--contorno boton--pequeno" type="button" @click="verFoto(f)">Ver</button>
+            <td class="botones"><template v-if="f.foto_estado === 'almacenada'">
+                <button class="boton boton--contorno boton--pequeno" type="button" @click="verFoto(f)">Ver</button>
+                <span v-if="f.foto_retener" class="nota">conservada</span>
+                <button v-else class="boton boton--contorno boton--pequeno" type="button" @click="abrirAccion('conservar', f)">Conservar</button>
+              </template>
               <span v-else>borrada</span></td>
             <td class="botones">
               <template v-if="f.estado === 'activo'">
