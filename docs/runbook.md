@@ -126,6 +126,7 @@ Salen de la revisión de seguridad de la fase 1a: en local no se pueden comproba
       peor caso que simula el stub. Supabase crea además `public.rls_auto_enable()` (trigger de eventos que activa
       RLS en tablas nuevas); la migración le quita el EXECUTE a PUBLIC sin apagar el trigger (probado en local).
 - [ ] PostgREST: una RPC con `Prefer: tx=rollback` no debe poder revertir la bitácora de `buscar_persona`.
+      Las dos últimas las hace `scripts/verificar_http.sh dev <tu correo>` (pide la clave sin mostrarla).
 - [ ] Un error de validación en `validar_persona` vía HTTP: el campo `details` de la respuesta debe venir vacío.
       (Cubierto en la base: las pruebas A-1 verifican que el error no trae DETAIL; PostgREST solo reenvía
       ese campo. Falta la prueba por HTTP con una sesión real.)
