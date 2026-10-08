@@ -22,6 +22,11 @@ import psycopg
 SERVICIO = "bicis_dev"
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 
+# Supabase trabaja en UTC: current_date y date_trunc('day', now()) dan el día UTC,
+# que después de las 7:00 p. m. de Colombia ya es «mañana». Fechas y horas de la
+# semilla se calculan en hora de Colombia.
+HOY_COLOMBIA = "(now() at time zone 'America/Bogota')::date"
+
 # (código, nombre, tipo, estado, lat, lon, dirección, horario, bicis)
 PUNTOS = [
     ("P01", "Plaza Alfonso López (demo)", "fijo", "activo", 10.477751, -73.244632,
@@ -59,10 +64,11 @@ def main() -> None:
             cur.execute("select set_config('app.accion', 'sembrar_dev', true)")
 
             cur.execute(
-                """insert into public.eventos (nombre, descripcion, lugar_texto, inicia_en, termina_en, estado, publicado)
+                f"""insert into public.eventos (nombre, descripcion, lugar_texto, inicia_en, termina_en, estado, publicado)
                    select 'Ciclopaseo de demostración', 'Evento ficticio para probar los puntos temporales.',
-                          'Balneario Hurtado', date_trunc('day', now()) + interval '4 days 7 hours',
-                          date_trunc('day', now()) + interval '4 days 12 hours', 'planeado', true
+                          'Balneario Hurtado',
+                          ({HOY_COLOMBIA} + 4 + time '07:00') at time zone 'America/Bogota',
+                          ({HOY_COLOMBIA} + 4 + time '12:00') at time zone 'America/Bogota', 'planeado', true
                     where not exists (select 1 from public.eventos where nombre = 'Ciclopaseo de demostración')""")
             cur.execute("select id from public.eventos where nombre = 'Ciclopaseo de demostración'")
             evento = cur.fetchone()[0]
@@ -79,8 +85,8 @@ def main() -> None:
                 condicion = "en_reparacion" if tipo == "taller" else "operativa"
                 disponibilidad = "no_disponible" if tipo == "taller" else "disponible"
                 cur.execute(
-                    """insert into public.bicicletas (numero, disponibilidad, condicion, punto_actual_id, marca, fecha_ingreso)
-                       select n, %s, %s, %s, 'Demo', current_date from generate_series(%s::int, %s::int) n
+                    f"""insert into public.bicicletas (numero, disponibilidad, condicion, punto_actual_id, marca, fecha_ingreso)
+                       select n, %s, %s, %s, 'Demo', {HOY_COLOMBIA} from generate_series(%s::int, %s::int) n
                        on conflict (numero) do nothing""",
                     (disponibilidad, condicion, punto, numero, numero + cantidad - 1))
                 numero += cantidad
@@ -89,9 +95,9 @@ def main() -> None:
             if cur.fetchone()[0] == 0:
                 texto, autorizacion, foto = politica_demo()
                 cur.execute(
-                    """insert into public.politicas_tratamiento
+                    f"""insert into public.politicas_tratamiento
                          (version, vigente_desde, texto_md, texto_autorizacion, texto_autorizacion_foto, sha256, vigente)
-                       values ('0.2', current_date, %s, %s, %s, '', true)""",
+                       values ('0.2', {HOY_COLOMBIA}, %s, %s, %s, '', true)""",
                     (texto, autorizacion, foto))
 
             cur.execute("select count(*) from public.bicicletas")
