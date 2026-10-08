@@ -32,10 +32,10 @@ async function simular(page, respuesta = { status: 200, cuerpo: { resultado: 'in
 
 async function llenarAdulto(page) {
   await page.getByLabel('Número de documento').fill('00100001')
-  await page.getByLabel('Nombres').fill('Ana')
-  await page.getByLabel('Apellidos').fill('Prueba')
-  await page.getByLabel('Celular').fill('300 123-4567')
-  await page.getByLabel('Edad').fill('30')
+  await page.getByLabel('Nombres', { exact: true }).fill('Ana')
+  await page.getByLabel('Apellidos', { exact: true }).fill('Prueba')
+  await page.getByLabel('Celular', { exact: true }).fill('300 123-4567')
+  await page.getByLabel('Edad', { exact: true }).fill('30')
   await page.getByLabel('Sexo / género').selectOption('mujer')
 }
 
@@ -78,7 +78,7 @@ test('preinscripción de un menor: pide acudiente y su declaración', async ({ p
   await page.goto('#/inscribirme')
   await llenarAdulto(page)
   await page.getByLabel('Tipo de documento').first().selectOption('TI')   // aparece el bloque del acudiente
-  await page.getByLabel('Edad').fill('14')
+  await page.getByLabel('Edad', { exact: true }).fill('14')
   await expect(page.getByRole('group', { name: 'Acudiente' })).toBeVisible()
   const acu = page.getByRole('group', { name: 'Acudiente' })
   await acu.getByLabel('Parentesco').selectOption('madre')
@@ -115,7 +115,7 @@ test('demasiados intentos: se traduce el código y el formulario sigue ahí', as
   await page.getByText(POLITICA.texto_autorizacion_foto).click()
   await page.getByRole('button', { name: 'Inscribirme' }).click()
   await expect(page.getByRole('alert')).toContainText('demasiados intentos de inscripción')
-  await expect(page.getByLabel('Nombres')).toHaveValue('Ana')
+  await expect(page.getByLabel('Nombres', { exact: true })).toHaveValue('Ana')
   // Reintento con el mismo formulario: mismo id_operacion (no duplica si el primero sí llegó).
   await expect(page.getByRole('button', { name: 'Inscribirme' })).toBeEnabled()
   await page.getByRole('button', { name: 'Inscribirme' }).click()
