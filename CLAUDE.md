@@ -43,7 +43,12 @@ scripts/migrar.sh dev [--aplicar]        # migraciones a Supabase (ver docs/runb
 python scripts/verificar_publicacion.py --historial   # ANTES de cada push (repo público)
 npx vite build --mode development --outDir dist-demo && npx vite preview --mode development --outDir dist-demo --port 4174
 node scripts/capturar.mjs <url> capturas/x.png "<selector>"   # captura esperando datos (Chromium en caché)
+scripts/desplegar_funciones.sh dev       # Edge Functions + secretos + pg_cron (exige `npx supabase@2.117.0 login`)
+BICIS_RESPALDO_GPG=<clave> scripts/respaldar_bd.sh prod   # respaldo cifrado fuera del repo (runbook §3)
+scripts/restaurar_prueba.sh <respaldo.tar.gpg>            # simulacro de restauración en el Postgres local
 ```
+- Playwright corre con 2 navegadores a la vez (`workers: 2`): con más, en WSL de ~4 GB Chromium no alcanza a arrancar.
+- `pgrep -f`/`pkill -f` con un patrón que aparece en el mismo comando mata la propia consola: usar PID.
 - Cuidado: tras un corte de la máquina, `git fsck --full` antes de seguir (ver memoria cortes-wsl-corrompen-git).
 - Commits con el correo privado de GitHub (`git config user.email` local del repo); nunca el Gmail.
 - Las pruebas de BD crean `bicis_pruebas` (cada prueba se revierte) y `bicis_pruebas_aislada`

@@ -86,6 +86,9 @@ Ambos deben responder `PostgreSQL 17…`.
    `preinscribir`; no la pegues en el chat).
 4. En desarrollo se usan las claves de prueba de Cloudflare (sitekey `1x00000000000000000000AA`, secret
    `1x0000000000000000000000000000000AA`: siempre pasan; funcionan en `localhost`).
+5. La **secret key** de prod no se escribe en ningún archivo: la pide por teclado (sin eco)
+   `scripts/desplegar_funciones.sh prod --confirmar <ref>`. La **sitekey** va en la variable
+   `VITE_TURNSTILE_SITE_KEY` de GitHub cuando el sitio pase a prod.
 
 ### 1.4 Lo que me pasas cuando termines
 Solo datos públicos: el **ref**, la **Project URL** y la **publishable key** de cada proyecto; el **correo** de tu
@@ -122,14 +125,63 @@ Salen de la revisión de seguridad de la fase 1a: en local no se pueden comproba
       (Cubierto en la base: las pruebas A-1 verifican que el error no trae DETAIL; PostgREST solo reenvía
       ese campo. Falta la prueba por HTTP con una sesión real.)
 
+### 2.3 Edge Functions y tareas programadas (hitos 1e y 1f)
+Una vez por máquina, en tu terminal (abre el navegador; el token lo guarda la CLI, nadie lo copia):
+```bash
+npx supabase@2.117.0 login
+```
+Publicar (funciones `preinscribir` y `purgar-fotos`, sus secretos, Vault y `pg_cron`):
+```bash
+scripts/desplegar_funciones.sh dev
+scripts/desplegar_funciones.sh prod --confirmar <ref-de-prod>    # pide la secret key de Turnstile
+```
+Cada corrida genera de nuevo `SAL_IP` y `CLAVE_CRON` al azar (no se muestran). Comprobar después:
+- [ ] Inscribirse en `#/inscribirme` de la demo con datos inventados → «Listo: quedaste preinscrito».
+- [ ] En los registros de la función (Dashboard → Edge Functions → preinscribir → Logs) no aparece
+      «la petición llegó sin IP del visitante» (D-25).
+- [ ] `select jobname, schedule, active from cron.job;` → `purgar-fotos` (0 8 * * *) y
+      `purgar-preinscripciones` (15 8 * * *), activos. 08:00 UTC = 03:00 en Colombia.
+- [ ] Al día siguiente, el tablero muestra la última purga con resultado `ok`.
+
 ### 2.2 Riesgos residuales aceptados (MVP)
 - Las lecturas directas del administrador (`personas`, `v_prestamos_admin`) no se registran en la bitácora;
   las exportaciones sí (pgaudit u RPC de lectura en Fase 2).
 - `marcar_clave_cambiada` es un control de interfaz: no comprueba que la clave haya cambiado.
 - El mensaje «ya estás inscrito» revela que un documento existe (mitigado con Turnstile y límite de tasa).
+- Los intentos de preinscripción con datos inválidos no cuentan para el límite (se revierten con su
+  transacción); cada uno exige igual un token nuevo de Turnstile.
+- La CSP va en `<meta>` (GitHub Pages no deja poner cabeceras): `frame-ancestors` no aplica, así que otra
+  página podría incrustar el sitio en un iframe. Se cierra al migrar a un alojamiento con cabeceras.
+- Si la base es la que falla al listar o marcar fotos, la purga no borra nada ese día y queda en error en el
+  tablero; los archivos de un borrado fallido se reintentan como huérfanos al día siguiente.
 
 ## 3. Respaldo y restauración
-(se completa en Fase 1g)
+El plan Free no trae respaldos. Una vez, crea tu clave gpg (la frase de paso solo la sabes tú; sin ella no se
+puede restaurar):
+```bash
+gpg --quick-gen-key "Santiago Torreglosa - respaldos bicis <correo-institucional>" default default 2y
+```
+Respaldo (semanal; también antes de cada migración en prod):
+```bash
+BICIS_RESPALDO_GPG=<correo de la clave> scripts/respaldar_bd.sh prod
+```
+- Queda en `~/Claude_code/respaldos-bicis/AAAA-MM-DD_bicis_prod.tar.gpg` (fuera del repo, permisos 600). Copia
+  el archivo a almacenamiento institucional: si el computador se daña, el respaldo local se pierde con él.
+- Guarda public y privado (estructura y datos), id/correo/fecha de las cuentas y los conteos. **No** guarda las
+  fotos de Storage (las conservadas por incidencia se exportan en Fase 2).
+- Conserva los 8 más recientes y el primero de cada mes de los últimos 12. El tablero muestra el último.
+
+Simulacro de restauración (trimestral; restaura en el Postgres local, nunca sobre Supabase):
+```bash
+scripts/pg_local.sh start
+scripts/restaurar_prueba.sh ~/Claude_code/respaldos-bicis/<archivo>.tar.gpg
+```
+Compara tabla por tabla con los conteos del respaldo y borra la base local al final. Probado contra dev el
+2026-10-08 con una clave desechable: 19/19 tablas coinciden.
+
+Programación: WSL no corre cron sin systemd. Propuesta (no verificada en este equipo): Programador de tareas de
+Windows con `wsl.exe -e bash -lc "cd ~/Claude_code/bicis-publicas-valledupar && BICIS_RESPALDO_GPG=… scripts/respaldar_bd.sh prod"`.
+Depende de que el PC esté encendido: con el plan Pro, Supabase hace respaldos diarios propios.
 
 ## 4. Si el proyecto se pausa
 El plan Free pausa el proyecto tras 7 días sin actividad. Los datos no se borran: se reactiva desde el Dashboard
