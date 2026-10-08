@@ -341,11 +341,11 @@ test.describe('formularios en el celular (390 px)', () => {
   })
 })
 
-test('el ingreso del personal está en la cabecera, también en el celular', async ({ page }) => {
+test('«Módulo operación» (ingreso del personal) está en la cabecera, también en el celular', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
   await page.goto('#/')
-  const enlace = page.getByRole('banner').getByRole('link', { name: 'Ingreso del personal' })
+  const enlace = page.getByRole('banner').getByRole('link', { name: 'Módulo operación' })
   await expect(enlace).toBeInViewport()
   await page.screenshot({ path: 'capturas/e2e-cabecera-movil.png' })
   await enlace.click()

@@ -37,7 +37,7 @@ const anio = new Date().getFullYear()
           <li><RouterLink to="/reglas">Reglas</RouterLink></li>
           <li><RouterLink to="/eventos">Eventos</RouterLink></li>
           <li v-if="!sesion.perfil"><RouterLink to="/inscribirme" class="menu__destacado">Inscribirme</RouterLink></li>
-          <li v-if="!sesion.perfil"><RouterLink to="/ingresar" class="menu__boton">Ingreso del personal</RouterLink></li>
+          <li v-if="!sesion.perfil"><RouterLink to="/ingresar" class="menu__boton">Módulo operación</RouterLink></li>
           <template v-if="sesion.perfil">
             <li><RouterLink to="/operador" class="menu__destacado">Turno</RouterLink></li>
             <li v-if="sesion.perfil.rol === 'administrador'"><RouterLink to="/admin" class="menu__destacado">Administración</RouterLink></li>
@@ -66,7 +66,7 @@ const anio = new Date().getFullYear()
           <span v-else>PQRSD: canal por definir</span>
         </li>
         <li>© {{ anio }} {{ sitio.alcaldia }}. Derechos de autor por definir.</li>
-        <li v-if="!sesion.perfil"><RouterLink to="/ingresar">Ingreso del personal</RouterLink></li>
+        <li v-if="!sesion.perfil"><RouterLink to="/ingresar">Módulo operación</RouterLink></li>
       </ul>
     </div>
   </footer>
