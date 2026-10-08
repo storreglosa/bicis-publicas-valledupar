@@ -27,6 +27,23 @@ const rutas = [
   { path: '/operador/mover', name: 'mover', component: () => import('./vistas/operador/Mover.vue'), meta: { titulo: 'Mover bicis', ...personal } },
   { path: '/operador/averia', name: 'averia', component: () => import('./vistas/operador/Averia.vue'), meta: { titulo: 'Reportar avería', ...personal } },
 
+  // Administración (rol administrador; la base lo vuelve a exigir en cada operación)
+  {
+    path: '/admin', component: () => import('./vistas/admin/Admin.vue'), meta: { rol: 'administrador' },
+    children: [
+      { path: '', name: 'admin', component: () => import('./vistas/admin/Tablero.vue'), meta: { titulo: 'Tablero' } },
+      { path: 'bicicletas', component: () => import('./vistas/admin/Bicicletas.vue'), meta: { titulo: 'Bicicletas' } },
+      { path: 'puntos', component: () => import('./vistas/admin/Puntos.vue'), meta: { titulo: 'Puntos y eventos' } },
+      { path: 'personas', component: () => import('./vistas/admin/Personas.vue'), meta: { titulo: 'Personas' } },
+      { path: 'prestamos', component: () => import('./vistas/admin/Prestamos.vue'), meta: { titulo: 'Préstamos' } },
+      { path: 'personal', component: () => import('./vistas/admin/Personal.vue'), meta: { titulo: 'Personal' } },
+      { path: 'parametros', component: () => import('./vistas/admin/Parametros.vue'), meta: { titulo: 'Parámetros' } },
+      { path: 'auditoria', component: () => import('./vistas/admin/Auditoria.vue'), meta: { titulo: 'Auditoría' } },
+      { path: 'etiquetas', component: () => import('./vistas/admin/Etiquetas.vue'), meta: { titulo: 'Etiquetas QR' } },
+      { path: 'politicas', component: () => import('./vistas/admin/Politicas.vue'), meta: { titulo: 'Política de datos' } },
+    ],
+  },
+
   { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: enConstruccion, meta: { titulo: 'Página no encontrada' } },
 ]
 

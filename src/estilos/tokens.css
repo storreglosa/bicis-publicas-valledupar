@@ -54,6 +54,13 @@
   --estado-sin-dato: #6b625a;
   --sobre-estado: #ffffff;
 
+  /* Datos (gráficos del tablero). Validado con el validador de paletas de la skill
+     dataviz: L 0.43–0.77, croma ≥ 0.1 y ≥ 3:1 contra la superficie. El verde de
+     acción (--secundario) se lee gris como color de datos (croma 0.083). */
+  --serie-1: #00897b;
+  --serie-1-pista: #d3ece8;   /* pista de los medidores: un paso claro del mismo tono */
+  --rejilla: #e8e1d6;         /* líneas guía del gráfico: un paso sobre la superficie */
+
   /* Mensajes al usuario */
   --exito: #1a7a3a;
   --aviso: #8a5a00;

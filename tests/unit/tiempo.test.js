@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { desfase, duracion, hora, minutosDesde } from '../../src/lib/tiempo.js'
+import { aEntradaLocal, deEntradaLocal, desfase, duracion, hora, minutosDesde } from '../../src/lib/tiempo.js'
 
 describe('tiempo', () => {
   afterEach(() => vi.useRealTimers())
@@ -21,5 +21,14 @@ describe('tiempo', () => {
     const d = desfase('2026-10-07T15:10:00Z')                      // hora del servidor
     expect(d).toBe(10 * 60 * 1000)
     expect(Math.round(minutosDesde('2026-10-07T14:40:00Z', d))).toBe(30)
+  })
+})
+
+
+describe('entradas de fecha y hora', () => {
+  it('ida y vuelta en hora de Colombia', () => {
+    expect(deEntradaLocal('2026-10-11T07:00')).toBe('2026-10-11T07:00:00-05:00')
+    expect(aEntradaLocal('2026-10-11T12:00:00Z')).toBe('2026-10-11T07:00')
+    expect(aEntradaLocal(deEntradaLocal('2026-12-31T23:30'))).toBe('2026-12-31T23:30')
   })
 })

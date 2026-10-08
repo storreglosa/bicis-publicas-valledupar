@@ -39,6 +39,7 @@ const anio = new Date().getFullYear()
           <li v-if="!sesion.perfil"><RouterLink to="/inscribirme" class="menu__destacado">Inscribirme</RouterLink></li>
           <template v-if="sesion.perfil">
             <li><RouterLink to="/operador" class="menu__destacado">Turno</RouterLink></li>
+            <li v-if="sesion.perfil.rol === 'administrador'"><RouterLink to="/admin" class="menu__destacado">Administración</RouterLink></li>
             <li><button type="button" class="menu__salir" @click="cerrarTurno">Cerrar turno</button></li>
           </template>
         </ul>

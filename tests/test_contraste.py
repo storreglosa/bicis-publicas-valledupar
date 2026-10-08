@@ -58,7 +58,7 @@ MENSAJES = [("--exito", "--exito-fondo"), ("--aviso", "--aviso-fondo"),
 
 # Elementos no textuales que deben distinguirse de los fondos a 3:1.
 NO_TEXTO = ["--linea-fuerte", "--foco", "--primario", "--estado-disponible",
-            "--estado-pocas", "--estado-sin", "--estado-sin-dato"]
+            "--estado-pocas", "--estado-sin", "--estado-sin-dato", "--serie-1"]
 
 
 def test_el_archivo_declara_todos_los_tokens_usados_aqui():
@@ -95,3 +95,8 @@ def test_elementos_no_textuales_se_distinguen(elemento, fondo):
     ratio = contraste(TK[elemento], TK[fondo])
     assert ratio >= UMBRAL_NO_TEXTO, (
         f"{elemento} {TK[elemento]} sobre {fondo} {TK[fondo]} da {ratio:.2f}:1")
+
+
+def test_la_serie_se_distingue_de_su_pista():
+    """El medidor: el relleno debe separarse de su pista (mismo tono, otro paso)."""
+    assert contraste(TK["--serie-1"], TK["--serie-1-pista"]) >= UMBRAL_NO_TEXTO

@@ -72,3 +72,42 @@ describe('contrato RPC frontend ↔ migraciones', () => {
     for (const p of params.filter((x) => x.obligatorio)) expect(l.claves, `falta ${p.nombre}`).toContain(p.nombre)
   })
 })
+
+// Escrituras directas del panel: .from('tabla').insert({ ... }) / .update({ ... })
+// solo pueden usar columnas concedidas en la migración de permisos (grant insert/update (cols)).
+const concesiones = new Map()   // 'tabla:insert' → Set(columnas)
+for (const ruta of archivos(join(RAIZ, 'supabase/migrations'), ['.sql'])) {
+  const sql = readFileSync(ruta, 'utf8')
+  for (const m of sql.matchAll(/grant\s+((?:(?:insert|update)\s*\([^)]*\)\s*,?\s*)+)on\s+public\.(\w+)\s+to\s+authenticated/g)) {
+    for (const g of m[1].matchAll(/(insert|update)\s*\(([^)]*)\)/g)) {
+      concesiones.set(`${m[2]}:${g[1]}`, new Set(g[2].split(',').map((c) => c.trim())))
+    }
+  }
+}
+
+const escrituras = []
+for (const ruta of archivos(join(RAIZ, 'src'), ['.vue', '.js'])) {
+  const codigo = readFileSync(ruta, 'utf8')
+  for (const m of codigo.matchAll(/\.from\('(\w+)'\)\s*\.(insert|update)\(\s*/g)) {
+    const inicio = m.index + m[0].length
+    const literal = codigo[inicio] === '{'
+    escrituras.push({
+      archivo: ruta.replace(RAIZ + '/', ''), tabla: m[1], op: m[2], literal,
+      claves: literal ? clavesDeObjeto(codigo, inicio) : [],
+    })
+  }
+}
+
+describe('escrituras directas ↔ columnas concedidas', () => {
+  it.each(escrituras.map((e) => [`${e.op} en ${e.tabla} (${e.archivo})`, e]))('%s', (_n, e) => {
+    expect(e.literal, 'usa un objeto literal para que la prueba pueda verificar las columnas').toBe(true)
+    const permitidas = concesiones.get(`${e.tabla}:${e.op}`)
+    expect(permitidas, `no hay grant ${e.op} sobre ${e.tabla} para authenticated`).toBeDefined()
+    for (const c of e.claves) expect([...permitidas], `columna no concedida: ${c}`).toContain(c)
+  })
+
+  it('lee las concesiones de la migración', () => {
+    expect(concesiones.get('parametros:update')).toEqual(new Set(['valor']))
+    expect(concesiones.get('puntos:insert').has('latitud')).toBe(true)
+  })
+})

@@ -31,3 +31,17 @@ export function desfase(ahoraServidor) {
 export function minutosDesde(fecha, desfaseMs = 0) {
   return (Date.now() + desfaseMs - new Date(fecha).getTime()) / 60000
 }
+
+/** ISO → valor para <input type="datetime-local"> en hora de Colombia ("2026-10-11T07:00"). */
+export function aEntradaLocal(iso) {
+  if (!iso) return ''
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date(iso)).map((x) => [x.type, x.value]))
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`
+}
+
+/** Valor de <input type="datetime-local"> (hora de Colombia) → ISO con zona. Colombia no tiene horario de verano. */
+export function deEntradaLocal(valor) {
+  return valor ? `${valor}:00-05:00` : null
+}
