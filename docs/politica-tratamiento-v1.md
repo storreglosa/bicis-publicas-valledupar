@@ -1,13 +1,15 @@
-<!-- BORRADOR v0.1 para revisión de la Oficina Jurídica. NO publicar sin su aprobación.
+<!-- BORRADOR v0.3 para revisión de la Oficina Jurídica. NO publicar sin su aprobación.
      Redactado el 2026-10-07 como insumo técnico. Citas verificadas el mismo día por el agente
      verificador-normativo y corregidas (docs/revisiones/2026-10-07_verificacion-normativa-politica-y-reglas.md);
+     v0.3 (2026-10-08): plazo de los reclamos incompletos (§10) y anonimización de preinscripciones (§8), según
+     docs/revisiones/2026-10-08_verificacion-normativa-inscripcion.md; los puntos de su §6 los decide Jurídica;
      Jurídica debe cotejarlas con el Diario Oficial. Los datos entre [corchetes] los
      completa la entidad. Cuando se apruebe, el texto se publica desde el panel de
      administración (publicar_politica) y queda versionado e inmutable. -->
 
 # Política de tratamiento de datos personales — Sistema de Bicicletas Públicas de Valledupar
 
-**Versión:** 0.2 (borrador) · **Vigente desde:** [fecha de aprobación]
+**Versión:** 0.3 (borrador) · **Vigente desde:** [fecha de aprobación]
 
 ## 1. Responsable del tratamiento
 
@@ -98,7 +100,10 @@ rige por un contrato de transmisión de datos en los términos del artículo 25 
 - Las **fotos de evidencia** de los préstamos devueltos sin novedad se eliminan automáticamente a los
   [N] días de la devolución. Las de préstamos con novedad (daño, pérdida, hurto, accidente) se conservan mientras
   se resuelve el caso.
-- Las **preinscripciones** que nunca se validan en un punto se eliminan a los [N] días.
+- Las **preinscripciones** que nunca se validan en un punto se **anonimizan** a los [N] días: se reemplazan el
+  nombre, el documento, el celular y el correo (y los del acudiente, si ya no responde por nadie más); se
+  conservan solo la edad declarada y el sexo/género, sin identidad. <!-- Jurídica: confirmar si anonimizar
+  cumple lo que aquí se promete como supresión (verificación 2026-10-08, P-3). -->
 - Los datos de personas sin préstamos durante [N] meses se **anonimizan**: se conserva el registro estadístico
   del uso, pero no la identidad.
 
@@ -119,7 +124,8 @@ Valledupar: [enlace]. Área responsable de atender las peticiones: [dependencia]
 - **Reclamos** (corregir, actualizar o suprimir datos, revocar la autorización o denunciar un incumplimiento): la
   solicitud debe incluir su identificación, la descripción de los hechos, una dirección para la respuesta y los
   documentos que quiera hacer valer. Si el reclamo está incompleto, se le pedirá completarlo dentro de los cinco (5)
-  días siguientes; si pasan dos (2) meses sin que lo complete, se entiende que desistió. Se resuelve en máximo
+  días siguientes a su recepción; si pasan dos (2) meses desde ese requerimiento sin que lo complete, se entiende
+  que desistió (Ley 1581 de 2012, art. 15 num. 1). Se resuelve en máximo
   quince (15) días hábiles; si no es posible, se le informan los motivos y la fecha de respuesta, que no supera
   ocho (8) días hábiles más.
 

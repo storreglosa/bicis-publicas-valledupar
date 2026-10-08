@@ -9,6 +9,9 @@
 export const LIMITE_BYTES = 4096
 const SITEVERIFY = 'https://challenges.cloudflare.com/turnstile/v0/siteverify'
 const CODIGO_NEGOCIO = /^[a-z_]{3,60}$/
+// Documentos ficticios: ningún documento colombiano real empieza por 00 (misma
+// convención de las pruebas y la semilla). La demo pública solo acepta estos.
+const DOCUMENTO_FICTICIO = /^\s*0\s*0/
 
 function json(cuerpo, status, encabezados = {}) {
   return new Response(JSON.stringify(cuerpo), {
@@ -61,7 +64,7 @@ export function crearVerificadorTurnstile(secreto, fetchFn = fetch) {
 }
 
 export function crearManejador({ origenesPermitidos, configuracionCompleta, verificarTurnstile, huellaIp,
-  preinscribir, registrar = console.error }) {
+  preinscribir, soloDatosFicticios = false, registrar = console.error }) {
   return async (req) => {
     const origen = req.headers.get('origin') ?? ''
     const permitido = origenesPermitidos.includes(origen)
@@ -83,6 +86,12 @@ export function crearManejador({ origenesPermitidos, configuracionCompleta, veri
     const token = cuerpo?.turnstile
     if (typeof token !== 'string' || !token || token.length > 2048 || !persona || typeof persona !== 'object' || Array.isArray(persona)) {
       return json({ error: 'datos_invalidos' }, 400, cors)
+    }
+
+    // Demo pública (dev): mientras Jurídica no apruebe el formulario, nadie debe dejar datos reales.
+    if (soloDatosFicticios) {
+      const documentos = [persona.numero_documento, persona.acudiente?.numero_documento].filter((d) => d != null)
+      if (!documentos.every((d) => DOCUMENTO_FICTICIO.test(String(d)))) return json({ error: 'solo_datos_ficticios' }, 400, cors)
     }
 
     const ip = ipDe(req)

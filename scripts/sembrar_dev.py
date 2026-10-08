@@ -44,15 +44,16 @@ PUNTOS = [
 ]
 
 
-def politica_demo() -> tuple[str, str, str]:
-    """Toma el borrador de docs/politica-tratamiento-v1.md (sin el comentario HTML)."""
+def politica_demo() -> tuple[str, str, str, str]:
+    """Toma el borrador de docs/politica-tratamiento-v1.md (sin comentarios HTML) y su versión."""
     texto = (RAIZ / "docs" / "politica-tratamiento-v1.md").read_text()
+    version = re.search(r"\*\*Versión:\*\* ([0-9.]+)", texto).group(1)
     texto = re.sub(r"<!--.*?-->", "", texto, flags=re.S).strip()
     cuerpo, _, casillas = texto.partition("## Textos de autorización")
     citas = re.findall(r"^> (.+(?:\n> .+)*)", casillas, flags=re.M)
     limpiar = lambda c: re.sub(r"\n> ", " ", c).strip()
     aviso = "**BORRADOR DE DEMOSTRACIÓN — no es la política vigente de la Secretaría.**\n\n"
-    return aviso + cuerpo.strip(), limpiar(citas[0]), limpiar(citas[1])
+    return version, aviso + cuerpo.strip(), limpiar(citas[0]), limpiar(citas[1])
 
 
 def main() -> None:
@@ -93,12 +94,12 @@ def main() -> None:
 
             cur.execute("select count(*) from public.politicas_tratamiento")
             if cur.fetchone()[0] == 0:
-                texto, autorizacion, foto = politica_demo()
+                version, texto, autorizacion, foto = politica_demo()
                 cur.execute(
                     f"""insert into public.politicas_tratamiento
                          (version, vigente_desde, texto_md, texto_autorizacion, texto_autorizacion_foto, sha256, vigente)
-                       values ('0.2', {HOY_COLOMBIA}, %s, %s, %s, '', true)""",
-                    (texto, autorizacion, foto))
+                       values (%s, {HOY_COLOMBIA}, %s, %s, %s, '', true)""",
+                    (version, texto, autorizacion, foto))
 
             cur.execute("select count(*) from public.bicicletas")
             bicis = cur.fetchone()[0]

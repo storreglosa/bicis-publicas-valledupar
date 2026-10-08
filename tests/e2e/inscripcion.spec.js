@@ -122,3 +122,15 @@ test('demasiados intentos: se traduce el código y el formulario sigue ahí', as
   await expect.poll(() => envios.length).toBe(2)
   expect(envios[1].persona.id_operacion).toBe(envios[0].persona.id_operacion)
 })
+
+test('demo pública: un documento que no empieza por 00 no se puede enviar', async ({ page }) => {
+  const envios = await simular(page)
+  await page.goto('#/inscribirme')
+  await llenarAdulto(page)
+  await page.getByLabel('Número de documento').fill('1065123456')
+  await page.getByText(POLITICA.texto_autorizacion).click()
+  await page.getByText(POLITICA.texto_autorizacion_foto).click()
+  await expect(page.getByText(/falta un número de documento inventado que empiece por 00/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Inscribirme' })).toBeDisabled()
+  expect(envios).toEqual([])
+})

@@ -48,11 +48,13 @@ echo "Proyecto: $entorno (ref $ref)"
 if [ "$entorno" = "dev" ]; then
   turnstile="1x0000000000000000000000000000000AA"     # clave de prueba de Cloudflare
   origenes="https://storreglosa.github.io,http://localhost:5173,http://localhost:4174"
+  ficticios=1                                         # la demo pública solo acepta documentos que empiezan por 00
 else
   read -r -s -p "Clave SECRETA del widget Turnstile de prod (no se muestra): " turnstile
   echo
   [ -n "$turnstile" ] || { echo "Sin clave de Turnstile no se publica." >&2; exit 1; }
   origenes="https://storreglosa.github.io"
+  ficticios=0
 fi
 clave_cron="$(openssl rand -hex 32)"
 sal_ip="$(openssl rand -hex 32)"
@@ -60,8 +62,8 @@ sal_ip="$(openssl rand -hex 32)"
 temporal="$(mktemp)"
 chmod 600 "$temporal"
 trap 'rm -f "$temporal"' EXIT
-printf 'TURNSTILE_SECRET_KEY=%s\nSAL_IP=%s\nCLAVE_CRON=%s\nORIGENES_PERMITIDOS=%s\n' \
-  "$turnstile" "$sal_ip" "$clave_cron" "$origenes" > "$temporal"
+printf 'TURNSTILE_SECRET_KEY=%s\nSAL_IP=%s\nCLAVE_CRON=%s\nORIGENES_PERMITIDOS=%s\nSOLO_DATOS_FICTICIOS=%s\n' \
+  "$turnstile" "$sal_ip" "$clave_cron" "$origenes" "$ficticios" > "$temporal"
 
 cd "$RAIZ"
 echo "→ Funciones"

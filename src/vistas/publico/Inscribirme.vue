@@ -39,8 +39,11 @@ const tipoActual = computed(() => tipos.value.find((t) => t.codigo === f.tipo))
 const esMenor = computed(() => Boolean(tipoActual.value?.implica_menor) || (f.edad !== '' && Number(f.edad) < 18))
 const adultos = computed(() => tipos.value.filter((t) => !t.implica_menor))
 
+// En la demo pública la función solo acepta documentos ficticios (empiezan por 00).
+const ficticio = (n) => /^\s*0\s*0/.test(n)
 const falta = computed(() => {
   if (!f.numero.trim()) return 'el número de documento'
+  if (esDemo && !ficticio(f.numero)) return 'un número de documento inventado que empiece por 00 (versión de prueba)'
   if (!f.nombres.trim() || !f.apellidos.trim()) return 'tus nombres y apellidos'
   if (!telefonoValido(f.telefono)) return 'un celular válido'
   if (f.edad === '') return 'tu edad'
@@ -50,6 +53,7 @@ const falta = computed(() => {
     if (!a.numero.trim() || !a.nombres.trim() || !a.apellidos.trim() || !telefonoValido(a.telefono) || !a.parentesco) {
       return 'los datos completos del acudiente'
     }
+    if (esDemo && !ficticio(a.numero)) return 'un documento inventado del acudiente que empiece por 00 (versión de prueba)'
     if (!f.aut.menorEscuchado) return 'la declaración del acudiente sobre la opinión del menor'
   }
   if (!f.aut.tratamiento) return 'la autorización de tratamiento de datos'
@@ -132,7 +136,7 @@ function otraPersona() {
       <p class="intro">Déjanos tus datos y ahórrate tiempo en el punto. La primera vez que prestes, el operador
         mira tu documento original (no lo retiene) y valida tu inscripción.</p>
       <p v-if="esDemo" class="mensaje mensaje--aviso"><span><strong>Versión de prueba:</strong> usa datos inventados,
-        no los tuyos.</span></p>
+        no los tuyos. Los números de documento deben empezar por <strong>00</strong> (ningún documento real empieza así).</span></p>
 
       <p v-if="!configurado || !claveSitio" class="mensaje mensaje--aviso"><span>La inscripción en línea todavía no está
         disponible. Puedes inscribirte directamente en cualquier punto con tu documento original.</span></p>

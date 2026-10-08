@@ -96,6 +96,19 @@ describe('preinscribir', () => {
     expect(await r2.json()).toEqual({ error: 'error_interno' })
   })
 
+  it('demo pública: solo documentos ficticios (00…), también el del acudiente; no toca Turnstile ni la base', async () => {
+    const { manejador, llamadas } = preparar({ soloDatosFicticios: true })
+    const real = await manejador(pedir({ persona: { ...PERSONA, numero_documento: '1065123456' }, turnstile: 'tok' }))
+    expect(real.status).toBe(400)
+    expect(await real.json()).toEqual({ error: 'solo_datos_ficticios' })
+    const acuReal = await manejador(pedir({ persona: { ...PERSONA, acudiente: { numero_documento: '77123456' } }, turnstile: 'tok' }))
+    expect(await acuReal.json()).toEqual({ error: 'solo_datos_ficticios' })
+    expect(llamadas.turnstile).toEqual([])
+    expect(llamadas.rpc).toEqual([])
+    const ficticio = await manejador(pedir({ persona: { ...PERSONA, acudiente: { numero_documento: '00900001' } }, turnstile: 'tok' }))
+    expect(ficticio.status).toBe(200)
+  })
+
   it('la IP sale de cf-connecting-ip antes que de x-forwarded-for (que el visitante puede falsificar)', () => {
     const h = (o) => new Request('https://x/f', { headers: o })
     expect(ipDe(h({ 'cf-connecting-ip': '203.0.113.7', 'x-forwarded-for': '1.2.3.4, 203.0.113.7' }))).toBe('203.0.113.7')

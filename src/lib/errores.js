@@ -79,6 +79,7 @@ export const MENSAJES = {
   origen_no_permitido: 'Esta inscripción solo funciona desde la página oficial del sistema.',
   solicitud_demasiado_grande: 'Los datos enviados son demasiado largos. Revisa los campos e inténtalo de nuevo.',
   metodo_no_permitido: 'La solicitud no es válida. Recarga la página e inténtalo de nuevo.',
+  solo_datos_ficticios: 'Esta es una versión de prueba: usa números de documento inventados que empiecen por 00 (también el del acudiente).',
   error_interno: 'No pudimos completar la inscripción por un problema del sistema. Inténtalo más tarde o inscríbete directamente en un punto.',
   prestamo_no_activo: 'Ese préstamo ya no está activo.',
   motivo_insuficiente: 'Escribe un motivo más detallado.',

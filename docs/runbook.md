@@ -135,8 +135,10 @@ Publicar (funciones `preinscribir` y `purgar-fotos`, sus secretos, Vault y `pg_c
 scripts/desplegar_funciones.sh dev
 scripts/desplegar_funciones.sh prod --confirmar <ref-de-prod>    # pide la secret key de Turnstile
 ```
-Cada corrida genera de nuevo `SAL_IP` y `CLAVE_CRON` al azar (no se muestran). Comprobar después:
-- [ ] Inscribirse en `#/inscribirme` de la demo con datos inventados → «Listo: quedaste preinscrito».
+Cada corrida genera de nuevo `SAL_IP` y `CLAVE_CRON` al azar (no se muestran). En dev fija además
+`SOLO_DATOS_FICTICIOS=1`: la demo pública solo acepta documentos que empiezan por 00 (D-27). Comprobar después:
+- [ ] Inscribirse en `#/inscribirme` de la demo con datos inventados (documento 00…) → «Listo: quedaste
+      preinscrito». Con un documento que no empiece por 00, la función responde `solo_datos_ficticios`.
 - [ ] En los registros de la función (Dashboard → Edge Functions → preinscribir → Logs) no aparece
       «la petición llegó sin IP del visitante» (D-25).
 - [ ] `select jobname, schedule, active from cron.job;` → `purgar-fotos` (0 8 * * *) y
