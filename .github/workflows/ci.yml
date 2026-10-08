@@ -1,0 +1,42 @@
+# Verificación de cada cambio (push a cualquier rama y pull requests): pruebas
+# unitarias, contraste WCAG de la paleta, pruebas del escáner, build y escáner de
+# datos personales. No necesita credenciales; las pruebas de base de datos y e2e
+# corren en local (runbook §2), así no hay credenciales de dev en GitHub.
+# Acciones fijadas por SHA (las mismas de desplegar.yml; Dependabot las actualiza).
+name: Verificar
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0   # el escáner revisa todo el historial
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Dependencias
+        run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Pruebas unitarias
+        run: npm test
+      - name: Contraste WCAG y pruebas del escáner
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet pytest==9.1.1
+          .venv/bin/python -m pytest tests/test_contraste.py tests/test_verificacion.py -q
+      - name: Construir
+        run: npm run build
+      - name: Verificar que no se publiquen datos personales ni secretos
+        run: |
+          python3 scripts/verificar_publicacion.py dist
+          python3 scripts/verificar_publicacion.py --historial

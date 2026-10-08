@@ -103,6 +103,11 @@ scripts/migrar.sh dev --aplicar       # aplica en dev (una transacción por arch
 BICIS_BD_SERVICIO=bicis_dev python -m pytest tests/bd/test_superficie.py   # siempre después
 ```
 Prod: `scripts/migrar.sh prod --aplicar --confirmar <ref-de-prod>`, solo con aprobación explícita de Santiago.
+**Estado de prod (2026-10-08, aprobado por Santiago: «prepararlo vacío»):** 7 migraciones aplicadas,
+`test_superficie` 14/14 contra prod, Santiago vinculado como administrador, `retencion.fotos_dias` = 7. Sin
+política publicada (nadie se puede inscribir), sin puntos, sin bicis y sin Edge Functions: la página pública
+sigue apuntando a dev hasta el concepto de Jurídica (C4). Las funciones de prod las publica Santiago con el
+widget real de Turnstile (§1.3, §2.3).
 Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
 Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 
@@ -187,4 +192,17 @@ Depende de que el PC esté encendido: con el plan Pro, Supabase hace respaldos d
 
 ## 4. Si el proyecto se pausa
 El plan Free pausa el proyecto tras 7 días sin actividad. Los datos no se borran: se reactiva desde el Dashboard
-del proyecto (Restore). Si pasa en prod, revisar que `mantener-activo.yml` siga habilitado en GitHub Actions.
+del proyecto (Restore). Si pasa, revisar que `mantener-activo.yml` siga habilitado en GitHub Actions: GitHub
+apaga los flujos programados de un repo público tras **60 días sin commits** (se reactivan desde la pestaña
+Actions con «Enable workflow»).
+
+## 5. Automatizaciones del repositorio
+- `.githooks/pre-commit`: el escáner revisa lo que va en cada commit y lo detiene si hay datos personales o
+  secretos. Se activa una vez por clon: `git config core.hooksPath .githooks`.
+- `.github/workflows/ci.yml`: en cada push y pull request, pruebas unitarias, contraste WCAG, pruebas del
+  escáner, build y escáner (sin credenciales).
+- `.github/workflows/desplegar.yml`: push a `main` → pruebas, build con las variables de dev, escáner y Pages.
+- `.github/workflows/mantener-activo.yml`: lectura pública diaria de dev y prod (variables `VITE_SUPABASE_*` y
+  `PROD_SUPABASE_URL` / `PROD_SUPABASE_PUBLISHABLE_KEY`, públicas por diseño). Se puede correr a mano desde
+  Actions → Mantener activo → Run workflow.
+- `.github/dependabot.yml`: cada mes propone actualizar las acciones fijadas por SHA (pull request para revisar).

@@ -1,0 +1,32 @@
+# El plan Free de Supabase pausa un proyecto tras 7 días sin actividad (diseño §10).
+# Una lectura diaria de la tabla pública de disponibilidad, con la clave publishable
+# (pública por diseño), mantiene activos dev (la demo) y prod. Si la lectura cuenta
+# como «actividad» no está verificado en detalle: si un proyecto se pausa, se
+# reactiva desde el Dashboard (runbook §4).
+# Ojo: GitHub desactiva los flujos programados de un repo público tras 60 días sin
+# commits; el runbook lo recuerda.
+name: Mantener activo
+
+on:
+  schedule:
+    - cron: '17 13 * * *'   # 08:17 en Colombia, todos los días
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  consultar:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        proyecto: [dev, prod]
+    steps:
+      - name: Lectura pública
+        env:
+          URL: ${{ matrix.proyecto == 'dev' && vars.VITE_SUPABASE_URL || vars.PROD_SUPABASE_URL }}
+          CLAVE: ${{ matrix.proyecto == 'dev' && vars.VITE_SUPABASE_PUBLISHABLE_KEY || vars.PROD_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$CLAVE" ]; then echo "Faltan las variables del proyecto ${{ matrix.proyecto }}"; exit 1; fi
+          curl --fail --silent --show-error --max-time 30 -o /dev/null -w "HTTP %{http_code}\n" \
+            "$URL/rest/v1/disponibilidad_puntos?select=punto_id&limit=1" -H "apikey: $CLAVE"

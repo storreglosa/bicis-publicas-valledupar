@@ -1,0 +1,10 @@
+# Las acciones de GitHub van fijadas por SHA; Dependabot propone cada mes las
+# actualizaciones (con el SHA nuevo) como pull request para revisarlas.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: "Actualiza acciones"
