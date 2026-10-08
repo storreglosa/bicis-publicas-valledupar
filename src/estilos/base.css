@@ -88,7 +88,8 @@ img { max-width: 100%; height: auto; }
 }
 
 /* Formularios: etiqueta siempre visible, áreas táctiles grandes, borde 3:1. */
-.campo { display: grid; gap: var(--esp-1); margin-bottom: var(--esp-4); }
+/* min-width: 0 → un campo nunca es más ancho que su columna (si no, una fecha se monta sobre el vecino). */
+.campo { display: grid; gap: var(--esp-1); margin-bottom: var(--esp-4); min-width: 0; }
 .campo > span, .campo > label { font-weight: 600; }
 .campo small { color: var(--tinta-2); }
 .campo input, .campo select, .campo textarea {
@@ -104,6 +105,8 @@ img { max-width: 100%; height: auto; }
 .campo textarea { min-height: 6rem; resize: vertical; }
 .campo input[aria-invalid='true'] { border-color: var(--error); }
 .fila-campos { display: grid; gap: 0 var(--esp-3); grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+/* Fecha y hora necesitan ~14rem para leerse completas: en el celular se apilan. */
+.fila-campos--fechas { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 .casilla { display: flex; gap: var(--esp-3); align-items: flex-start; margin-bottom: var(--esp-3); cursor: pointer; }
 .casilla input { width: 1.5rem; height: 1.5rem; margin-top: 0.15rem; flex: none; accent-color: var(--primario); }
 

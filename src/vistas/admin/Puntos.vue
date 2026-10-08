@@ -238,7 +238,7 @@ async function guardarEvento() {
       @cerrar="evento = null">
       <form @submit.prevent="guardarEvento">
         <label class="campo"><span>Nombre del evento</span><input v-model="evento.nombre" maxlength="120" /></label>
-        <div class="fila-campos">
+        <div class="fila-campos fila-campos--fechas">
           <label class="campo"><span>Inicia (hora de Colombia)</span><input v-model="evento.inicia" type="datetime-local" /></label>
           <label class="campo"><span>Termina</span><input v-model="evento.termina" type="datetime-local" /></label>
           <label class="campo"><span>Estado</span>

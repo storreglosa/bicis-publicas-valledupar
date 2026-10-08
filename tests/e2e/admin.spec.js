@@ -286,6 +286,61 @@ test.describe('ventanas de préstamos y personas (pantalla de portátil)', () =>
   })
 })
 
+// Cada campo de una fila debe quedar dentro de la ventana y sin montarse sobre el
+// vecino (antes, a 390 px, «Termina» se salía 76 px por la derecha y la etiqueta
+// «Inicia (hora de Colombia)» pisaba la de «Termina»).
+async function revisarFilas(ventana) {
+  const problemas = await ventana.evaluate((d) => {
+    const caja = d.getBoundingClientRect()
+    const fuera = []
+    for (const fila of d.querySelectorAll('.fila-campos')) {
+      const hijos = [...fila.children].map((h) => ({ texto: h.textContent.trim().slice(0, 30), r: h.getBoundingClientRect() }))
+      for (const h of hijos) {
+        if (h.r.left < caja.left - 0.5 || h.r.right > caja.right + 0.5) fuera.push(`«${h.texto}» se sale de la ventana`)
+        const control = fila.querySelector(':scope > * input, :scope > * select')
+        if (control && control.scrollWidth > control.clientWidth + 1 && control.type !== 'date' && control.type !== 'datetime-local') {
+          fuera.push(`«${h.texto}» recorta su contenido`)
+        }
+      }
+      for (let a = 0; a < hijos.length; a++) {
+        for (let b = a + 1; b < hijos.length; b++) {
+          const [x, y] = [hijos[a].r, hijos[b].r]
+          if (x.left < y.right - 0.5 && y.left < x.right - 0.5 && x.top < y.bottom - 0.5 && y.top < x.bottom - 0.5) {
+            fuera.push(`«${hijos[a].texto}» se traslapa con «${hijos[b].texto}»`)
+          }
+        }
+      }
+    }
+    return fuera
+  })
+  expect(problemas).toEqual([])
+}
+
+test.describe('formularios en el celular (390 px)', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('nuevo evento: las fechas no se traslapan y se leen completas', async ({ page }) => {
+    await simular(page)
+    await ingresar(page, '/admin/puntos')
+    await page.getByRole('button', { name: 'Nuevo evento' }).click()
+    const ventana = page.getByRole('dialog', { name: 'Nuevo evento' })
+    await expect(ventana).toBeVisible()
+    await revisarFilas(ventana)
+    const inicia = await ventana.getByLabel('Inicia (hora de Colombia)').boundingBox()
+    expect(inicia.width).toBeGreaterThanOrEqual(14 * 16 - 1)             // no se encoge hasta recortar la fecha
+    await page.screenshot({ path: 'capturas/e2e-admin-5-evento-movil.png' })
+  })
+
+  test('gestionar bici: los campos caben en la ventana', async ({ page }) => {
+    await simular(page)
+    await ingresar(page, '/admin/bicicletas')
+    await page.getByRole('row', { name: /BPV-001/ }).getByRole('button', { name: 'Gestionar' }).click()
+    const ventana = page.getByRole('dialog', { name: 'BPV-001' })
+    await expect(ventana).toBeVisible()
+    await revisarFilas(ventana)
+  })
+})
+
 test('el ingreso del personal está en la cabecera, también en el celular', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.route('**/rest/v1/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
