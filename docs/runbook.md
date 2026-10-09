@@ -107,9 +107,11 @@ BICIS_BD_SERVICIO=bicis_dev python -m pytest tests/bd/test_superficie.py   # sie
 Prod: `scripts/migrar.sh prod --aplicar --confirmar <ref-de-prod>`, solo con aprobación explícita de Santiago.
 **Estado de prod (2026-10-08, aprobado por Santiago: «prepararlo vacío»):** 7 migraciones aplicadas,
 `test_superficie` 14/14 contra prod, Santiago vinculado como administrador, `retencion.fotos_dias` = 7. Sin
-política publicada (nadie se puede inscribir), sin puntos, sin bicis y sin Edge Functions: la página pública
-sigue apuntando a dev hasta el concepto de Jurídica (C4). Las funciones de prod las publica Santiago con el
-widget real de Turnstile (§1.3, §2.3).
+política publicada (nadie se puede inscribir), sin puntos ni bicis: la página pública sigue apuntando a dev
+hasta el concepto de Jurídica (C4). 2026-10-09: Santiago publicó las Edge Functions con el widget real de
+Turnstile; comprobado: otro origen → 403, token falso → `verificacion_fallida` (secreto real, sin modo demo),
+purga sin clave → 401, purga por pg_cron → `ok`; tareas `purgar-fotos` y `purgar-preinscripciones` activas.
+Primer respaldo y simulacro de restauración hechos (§3).
 Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
 Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 
