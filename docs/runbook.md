@@ -185,7 +185,10 @@ scripts/pg_local.sh start
 scripts/restaurar_prueba.sh ~/Claude_code/respaldos-bicis/<archivo>.tar.gpg
 ```
 Compara tabla por tabla con los conteos del respaldo y borra la base local al final. Probado contra dev el
-2026-10-08 con una clave desechable: 19/19 tablas coinciden.
+2026-10-08 con una clave desechable: 19/19 tablas coinciden. Primer respaldo real de prod (vacío) el 2026-10-09
+con la clave de Santiago (subclave de cifrado `C907655386CDE0C0`, vence 2028-10-08) y simulacro con su frase de
+paso: «Restauración verificada». La clave privada y el certificado de revocación tienen copia fuera de
+`~/.gnupg` (pendiente una copia fuera de este computador).
 
 Programación: WSL no corre cron sin systemd. Propuesta (no verificada en este equipo): Programador de tareas de
 Windows con `wsl.exe -e bash -lc "cd ~/Claude_code/bicis-publicas-valledupar && BICIS_RESPALDO_GPG=… scripts/respaldar_bd.sh prod"`.
