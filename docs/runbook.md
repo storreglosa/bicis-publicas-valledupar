@@ -125,11 +125,11 @@ Salen de la revisión de seguridad de la fase 1a: en local no se pueden comproba
 - [x] Privilegios por defecto de dev: esquema **clásico** (ALL para anon/authenticated/service_role en public), el
       peor caso que simula el stub. Supabase crea además `public.rls_auto_enable()` (trigger de eventos que activa
       RLS en tablas nuevas); la migración le quita el EXECUTE a PUBLIC sin apagar el trigger (probado en local).
-- [ ] PostgREST: una RPC con `Prefer: tx=rollback` no debe poder revertir la bitácora de `buscar_persona`.
-      Las dos últimas las hace `scripts/verificar_http.sh dev <tu correo>` (pide la clave sin mostrarla).
-- [ ] Un error de validación en `validar_persona` vía HTTP: el campo `details` de la respuesta debe venir vacío.
-      (Cubierto en la base: las pruebas A-1 verifican que el error no trae DETAIL; PostgREST solo reenvía
-      ese campo. Falta la prueba por HTTP con una sesión real.)
+- [x] PostgREST: una RPC con `Prefer: tx=rollback` no puede revertir la bitácora de `buscar_persona`
+      (dev, 2026-10-09, sesión real de Santiago: la bitácora pasó de 10 a 11; PostgREST no aplicó la preferencia).
+- [x] Un error de validación en `validar_persona` vía HTTP llega sin `details` ni `hint`
+      (dev, 2026-10-09: `message='persona_no_existe'`, `details=None`, `hint=None`).
+      Las dos se repiten con `scripts/verificar_http.sh dev|prod <correo>` (pide la clave sin mostrarla).
 
 ### 2.3 Edge Functions y tareas programadas (hitos 1e y 1f)
 Una vez por máquina, en tu terminal (abre el navegador; el token lo guarda la CLI, nadie lo copia):
