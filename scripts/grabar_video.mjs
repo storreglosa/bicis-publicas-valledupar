@@ -59,7 +59,11 @@ const lista = join(CUADROS, 'lista.txt')
 writeFileSync(lista, lineas.join('\n') + '\n')
 
 const r = spawnSync(FFMPEG, ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lista,
-  '-vf', 'fps=30,format=yuv420p', '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
+  // Los JPEG son de rango completo; el MP4 va en rango limitado BT.709 (yuv420p), el que los
+  // celulares y WhatsApp esperan: si no, se ven los colores lavados.
+  '-vf', 'fps=30,scale=in_range=pc:out_range=tv:in_color_matrix=bt601:out_color_matrix=bt709,format=yuv420p',
+  '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv',
+  '-c:v', 'libx264', '-preset', 'slow', '-crf', '20',
   // Sin -t, ffmpeg alarga el último cuadro unos segundos de más.
   '-t', (cuadros.at(-1).t - cuadros[0].t + CIERRE).toFixed(3), '-movflags', '+faststart', SALIDA], { stdio: 'inherit' })
 if (r.status !== 0) throw new Error(`ffmpeg terminó con código ${r.status}`)
