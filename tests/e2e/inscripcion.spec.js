@@ -22,7 +22,7 @@ async function simular(page, respuesta = { status: 200, cuerpo: { resultado: 'in
       render(el, o) { opciones = o; el.textContent = 'Verificación simulada'; setTimeout(() => o.callback('token-de-prueba'), 50); return 'w1' },
       reset() { setTimeout(() => opciones.callback('token-de-prueba-2'), 50) }, remove() {} }`,
   }))
-  await page.route('**/functions/v1/preinscribir', (r) => {
+  await page.route('**/functions/v1/preinscribir**', (r) => {
     if (r.request().method() === 'OPTIONS') return r.fulfill({ status: 204 })
     envios.push(r.request().postDataJSON())
     return json(r, respuesta.cuerpo, respuesta.status)

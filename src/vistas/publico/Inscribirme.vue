@@ -90,7 +90,8 @@ async function enviar() {
       nombres: f.acu.nombres, apellidos: f.acu.apellidos, telefono: f.acu.telefono, parentesco: f.acu.parentesco,
     }
   }
-  const { data, error: e } = await supabase.functions.invoke('preinscribir', { body: { persona, turnstile: token.value } })
+  // Región fija: la función corre en EE. UU., junto a la base (política §7), no en la más cercana al visitante.
+  const { data, error: e } = await supabase.functions.invoke('preinscribir', { body: { persona, turnstile: token.value }, region: 'us-east-1' })
   enviando.value = false
   verificacion.value?.reiniciar()           // el token ya se usó
   if (e) {
@@ -116,7 +117,7 @@ function otraPersona() {
       <p class="resultado__titulo">Listo: quedaste preinscrito.</p>
       <p>La primera vez que vayas a prestar una bici, muéstrale tu <strong>documento original</strong> al operador
         en el punto para validar tu inscripción.<template v-if="esMenor"> Ve con tu representante legal: debe presentar su
-        documento y autorizar en persona.</template></p>
+        documento y ratificar la autorización en persona.</template></p>
       <div class="acciones">
         <RouterLink to="/mapa" class="boton">Ver puntos y bicis disponibles</RouterLink>
         <button class="boton boton--contorno" type="button" @click="otraPersona">Inscribir a otra persona</button>
@@ -171,7 +172,7 @@ function otraPersona() {
           <p class="mensaje mensaje--aviso"><span>Eres menor de edad: tu representante legal (madre, padre, tutor o curador)
             debe llenar esta parte contigo y acompañarte al punto la primera vez, con su documento original, para
             ratificar la autorización en persona.</span></p>
-          <p class="nota">Responder los datos del menor es voluntario; sin ellos no es posible inscribirlo en el servicio.</p>
+          <p class="nota">Responder los datos del menor (los de la sección «Tus datos») es voluntario; sin ellos no es posible inscribirlo en el servicio.</p>
           <div class="fila-campos">
             <label class="campo"><span>Parentesco</span>
               <select v-model="f.acu.parentesco"><option value="" disabled>Elige…</option>

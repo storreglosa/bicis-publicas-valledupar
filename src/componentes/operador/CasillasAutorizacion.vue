@@ -31,7 +31,7 @@ const modelo = defineModel({ type: Object, required: true })
     </label>
     <label v-if="esMenor" class="casilla">
       <input v-model="modelo.menorEscuchado" type="checkbox" />
-      <span>El representante legal del menor (madre, padre, tutor o curador) declara que escuchó su opinión antes de otorgar esta autorización y que la tuvo en cuenta.</span>
+      <span>Como representante legal del menor (madre, padre, tutor o curador), declaro que escuché su opinión antes de otorgar esta autorización y que la tuve en cuenta.</span>
     </label>
     <p class="politica">Texto completo: <RouterLink :to="`/politica-de-datos/${politica.version}`" target="_blank">política de tratamiento de datos</RouterLink>.</p>
   </fieldset>

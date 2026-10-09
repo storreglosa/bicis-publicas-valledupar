@@ -67,7 +67,7 @@ const anio = new Date().getFullYear()
       </div>
       <ul class="pie__enlaces" aria-label="Información legal">
         <li><RouterLink to="/politica-de-datos">Política de tratamiento de datos</RouterLink></li>
-        <li><RouterLink to="/reglas">Términos y condiciones de uso</RouterLink></li>
+        <li><RouterLink to="/reglas">Reglas de uso</RouterLink></li>
         <li><a :href="`mailto:${sitio.contacto.correo}?subject=${encodeURIComponent('PQRSD - Bicis Públicas')}`">PQRSD: peticiones, quejas, reclamos, sugerencias y denuncias</a></li>
         <li>© {{ anio }} {{ sitio.alcaldia }} · {{ sitio.entidad }}</li>
         <li v-if="!sesion.perfil"><RouterLink to="/ingresar">Módulo operación</RouterLink></li>

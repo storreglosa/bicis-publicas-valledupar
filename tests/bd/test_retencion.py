@@ -256,3 +256,17 @@ def test_anonimiza_a_quien_no_presta_en_el_plazo_y_respeta_las_excepciones(bd):
     assert bd.uno("select nombres from public.personas where id = %s", (vieja,)) == "Anonimizada"
     detalle = bd.uno("select detalle from privado.ejecuciones_tareas where tarea = 'purgar_preinscripciones' order by id desc limit 1")
     assert detalle["inactivas_anonimizadas"] == 2 and detalle["plazo_meses"] == 24
+
+
+def test_la_tarea_diaria_borra_las_huellas_de_ip_de_mas_de_dos_dias(bd):
+    """Política v1.0 §8: la huella de la IP se borra a los 2 días aunque nadie más se preinscriba."""
+    vieja, reciente = secrets.token_hex(32), secrets.token_hex(32)
+    bd.como("dueno")
+    bd.sql("insert into privado.intentos_preinscripcion (ip_huella, en) values "
+           "(%s, now() - interval '3 days'), (%s, now() - interval '1 day')", (vieja, reciente))
+    bd.parametro("retencion.preinscripcion_sin_validar_dias", None)
+    bd.parametro("retencion.anonimizar_inactivos_meses", None)
+    bd.uno("select privado.purgar_preinscripciones()")
+    assert {h for (h,) in bd.sql("select ip_huella from privado.intentos_preinscripcion")} == {reciente}
+    detalle = bd.uno("select detalle from privado.ejecuciones_tareas where tarea = 'purgar_preinscripciones' order by id desc limit 1")
+    assert detalle["huellas_ip_borradas"] == 1

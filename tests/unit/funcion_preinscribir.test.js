@@ -133,12 +133,12 @@ describe('huella de la IP', () => {
 })
 
 describe('verificación de Turnstile', () => {
-  it('manda secreto, token, IP y clave de idempotencia; acepta solo success === true', async () => {
+  it('manda secreto, token y clave de idempotencia (no la IP); acepta solo success === true', async () => {
     const fetchFn = vi.fn(async () => new Response(JSON.stringify({ success: true })))
     expect(await crearVerificadorTurnstile('secreto', fetchFn)('tok', '203.0.113.7', 'op-1')).toBe(true)
     const [url, opciones] = fetchFn.mock.calls[0]
     expect(url).toBe('https://challenges.cloudflare.com/turnstile/v0/siteverify')
-    expect(JSON.parse(opciones.body)).toEqual({ secret: 'secreto', response: 'tok', remoteip: '203.0.113.7', idempotency_key: 'op-1' })
+    expect(JSON.parse(opciones.body)).toEqual({ secret: 'secreto', response: 'tok', idempotency_key: 'op-1' })
     const no = vi.fn(async () => new Response(JSON.stringify({ success: false, 'error-codes': ['invalid-input-response'] })))
     expect(await crearVerificadorTurnstile('secreto', no)('tok', 'ip')).toBe(false)
     const caido = vi.fn(async () => new Response('', { status: 502 }))

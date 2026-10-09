@@ -23,7 +23,7 @@ export function encabezadosCors(origen) {
   return {
     'access-control-allow-origin': origen,
     'access-control-allow-methods': 'POST, OPTIONS',
-    'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+    'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-region',
     'access-control-max-age': '86400',
     vary: 'Origin',
   }
@@ -49,10 +49,11 @@ export function crearHuellaIp(sal, ahora = () => new Date()) {
 }
 
 // Verificación del token en Cloudflare (válido 300 s y de un solo uso). La clave de
-// idempotencia evita que un reintento de red gaste el token dos veces.
+// idempotencia evita que un reintento de red gaste el token dos veces. No se envía
+// la IP (remoteip es opcional): minimización; Cloudflare ya la ve desde el widget.
 export function crearVerificadorTurnstile(secreto, fetchFn = fetch) {
-  return async (token, ip, idempotencia) => {
-    const cuerpo = { secret: secreto, response: token, remoteip: ip }
+  return async (token, _ip, idempotencia) => {
+    const cuerpo = { secret: secreto, response: token }
     if (idempotencia) cuerpo.idempotency_key = idempotencia
     const r = await fetchFn(SITEVERIFY, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo),

@@ -179,7 +179,7 @@ test('un menor sin autorización presencial exige que el acudiente autorice en e
   await page.getByText('Autorizo el tratamiento de mis datos (demo).').click()
   await page.getByText('Autorizo la foto de evidencia (demo).').click()
   await expect(continuar).toBeDisabled()                      // falta la constancia de escuchar al menor
-  await page.getByText(/declara que escuchó su opinión/).click()
+  await page.getByText(/declaro que escuché su opinión/).click()
   await page.screenshot({ path: 'capturas/e2e-7-menor.png', fullPage: true })
   await continuar.click()
 

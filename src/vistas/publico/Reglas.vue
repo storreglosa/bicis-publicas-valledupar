@@ -81,7 +81,7 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
          el art. 95 vigente (texto de la Ley 1811 de 2016) dice «transitar ocupando un carril» y «en grupo
          deberán ocupar un carril». Hasta que Jurídica defina cómo comunicarlo, no se publica ninguna versión. -->
     <ul>
-      <li>Usa las ciclorrutas donde existan; fuera de ellas, circula por la calzada. Nunca por los andenes ni por las vías exclusivas del transporte público.</li>
+      <li>No circules por los andenes ni por las vías exclusivas del transporte público.</li>
       <li>Respeta las señales de tránsito, los semáforos y los límites de velocidad.</li>
       <li>No te sujetes de otros vehículos ni lleves acompañante si la bicicleta no tiene un dispositivo diseñado para eso.</li>
       <li>Usa las señales con el brazo para indicar giros.</li>
