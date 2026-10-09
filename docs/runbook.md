@@ -89,6 +89,8 @@ Ambos deben responder `PostgreSQL 17…`.
 5. La **secret key** de prod no se escribe en ningún archivo: la pide por teclado (sin eco)
    `scripts/desplegar_funciones.sh prod --confirmar <ref>`. La **sitekey** va en la variable
    `VITE_TURNSTILE_SITE_KEY` de GitHub cuando el sitio pase a prod.
+   Widget real creado el 2026-10-09 (hostname `storreglosa.github.io`); su sitekey quedó guardada en la variable
+   `PROD_TURNSTILE_SITE_KEY` para ese cambio. La demo sigue con la clave de prueba.
 
 ### 1.4 Lo que me pasas cuando termines
 Solo datos públicos: el **ref**, la **Project URL** y la **publishable key** de cada proyecto; el **correo** de tu
