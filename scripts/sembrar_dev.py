@@ -11,6 +11,12 @@ el borrador de la política de datos publicado como versión de demostración.
 Todos los nombres llevan «(demo)». No crea personas ni préstamos: esos datos los
 genera el uso de la demo. Se niega a correr contra cualquier servicio que no sea
 bicis_dev. Es idempotente: correrlo dos veces no duplica nada.
+
+    python scripts/sembrar_dev.py --politica
+
+publica en dev, como vigente, la versión de docs/politica-tratamiento-v1.md si aún no
+existe (las versiones publicadas son inmutables: un cambio de texto exige una versión
+nueva). Queda en la auditoría con su motivo.
 """
 
 import pathlib
@@ -109,5 +115,30 @@ def main() -> None:
         print(f"  {codigo}: {disponibles:>3} disponibles · visible={visible} · abierto={abierto}")
 
 
+def publicar_politica() -> None:
+    version, texto, autorizacion, foto = politica_demo()
+    with psycopg.connect(f"service={SERVICIO}") as conn:
+        servicio = conn.info.get_parameters().get("service") or SERVICIO
+        if servicio != SERVICIO:
+            sys.exit(f"Me niego a publicar en {servicio}: solo {SERVICIO}.")
+        with conn.transaction(), conn.cursor() as cur:
+            cur.execute("select 1 from public.politicas_tratamiento where version = %s", (version,))
+            if cur.fetchone():
+                print(f"La versión {version} ya está publicada en dev: no se toca (es inmutable).")
+                return
+            cur.execute("select set_config('app.accion', 'politica.publicar', true), "
+                        "set_config('app.motivo', %s, true)",
+                        (f"Política {version} de la demo (docs/politica-tratamiento-v1.md), publicada por script",))
+            cur.execute("update public.politicas_tratamiento set vigente = false where vigente")
+            cur.execute(
+                f"""insert into public.politicas_tratamiento
+                     (version, vigente_desde, texto_md, texto_autorizacion, texto_autorizacion_foto, sha256, vigente)
+                   values (%s, {HOY_COLOMBIA}, %s, %s, %s, '', true)
+                   returning id, sha256""",
+                (version, texto, autorizacion, foto))
+            id_, sha = cur.fetchone()
+    print(f"Publicada la versión {version} como vigente en dev (id {id_}, sha256 {sha[:12]}…).")
+
+
 if __name__ == "__main__":
-    main()
+    publicar_politica() if "--politica" in sys.argv[1:] else main()
