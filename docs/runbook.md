@@ -114,7 +114,9 @@ purga sin clave → 401, purga por pg_cron → `ok`; tareas `purgar-fotos` y `pu
 Primer respaldo y simulacro de restauración hechos (§3). Más tarde ese día, con el OK de Santiago: migraciones
 `20261009100000` y `20261009120000`, plazos 90 días / 24 meses (D-30) y código nuevo de las funciones (CORS con
 `x-region`, sin `remoteip`), subido sin tocar los secretos (`functions deploy` solo); verificado: preflight con
-`x-region`, token falso → `verificacion_fallida` desde `us-east-1`, purga sin clave → 401, superficie 14/14.
+`x-region`, token falso → `verificacion_fallida` desde `us-east-1`, purga sin clave → 401, superficie 14/14. Después,
+también con su OK: migración `20261009150000` (eliminar puntos y eventos nunca usados, D-32); prod queda con las
+10 migraciones de dev, superficie 14/14, vacío (0 personas, 0 puntos, 0 eventos).
 Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
 Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 
