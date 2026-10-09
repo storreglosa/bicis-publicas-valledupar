@@ -3,7 +3,8 @@
 // T01) es estable: se imprime y no cambia aunque cambie el nombre. El tipo no se
 // cambia después de creado; un punto de evento se cierra solo si no le quedan bicis.
 // Un evento se crea junto con su punto de préstamo, ubicado en el mapa; después se
-// le pueden agregar más puntos desde la misma ventana.
+// le pueden agregar más puntos desde la misma ventana. Eliminar solo funciona con lo
+// que nunca se usó (sin préstamos ni bicis, D-32): lo demás se cierra u oculta.
 import { computed, ref, watch } from 'vue'
 import Dialogo from '../../componentes/admin/Dialogo.vue'
 import SelectorUbicacion from '../../componentes/admin/SelectorUbicacion.vue'
@@ -38,7 +39,8 @@ const bicisPorPunto = computed(() => {
 const nombreEvento = (id) => eventos.value.find((e) => e.id === id)?.nombre ?? '—'
 const puntosDe = (eventoId) => puntos.value.filter((p) => p.evento_id === eventoId)
 const puntosDelEvento = computed(() => (evento.value?.id ? puntosDe(evento.value.id) : []))
-const hayDialogo = computed(() => !!(punto.value || evento.value))
+const borrado = ref(null)    // { tipo: 'punto' | 'evento', id, titulo, puntos, motivo }
+const hayDialogo = computed(() => !!(punto.value || evento.value || borrado.value))
 
 function avisar(tipo, texto) { mensaje.value = { tipo, texto } }
 function recargarTodo() { cPuntos.recargar(); cEventos.recargar(); cConteo.recargar() }
@@ -117,6 +119,28 @@ async function cerrarPunto(p) {
   const { error } = await supabase.rpc('cerrar_punto_evento', { p_punto_id: p.id })
   if (error) return avisar('error', traducirError(error).mensaje)
   avisar('exito', `Punto ${p.codigo} cerrado.`)
+  recargarTodo()
+}
+
+function pedirBorrado(tipo, fila) {
+  avisar('', '')
+  borrado.value = {
+    tipo, id: fila.id, motivo: '',
+    titulo: tipo === 'punto' ? `el punto ${fila.codigo}` : `el evento «${fila.nombre}»`,
+    puntos: tipo === 'evento' ? puntosDe(fila.id).map((x) => x.codigo) : [],
+  }
+}
+
+async function eliminar() {
+  const b = borrado.value
+  guardando.value = true
+  const { error } = b.tipo === 'punto'
+    ? await supabase.rpc('eliminar_punto', { p_punto_id: b.id, p_motivo: b.motivo })
+    : await supabase.rpc('eliminar_evento', { p_evento_id: b.id, p_motivo: b.motivo })
+  guardando.value = false
+  if (error) return avisar('error', traducirError(error).mensaje)
+  avisar('exito', `Se eliminó ${b.titulo}${b.puntos.length ? ` y sus puntos (${b.puntos.join(', ')})` : ''}.`)
+  borrado.value = null
   recargarTodo()
 }
 
@@ -212,6 +236,8 @@ async function guardarEvento() {
               <button v-if="p.tipo === 'evento' && p.estado !== 'cerrado'" class="boton boton--contorno boton--pequeno" type="button"
                 :disabled="(bicisPorPunto[p.id] ?? 0) > 0" :title="(bicisPorPunto[p.id] ?? 0) > 0 ? 'Mueve primero sus bicis' : ''"
                 @click="cerrarPunto(p)">Cerrar</button>
+              <button v-if="!bicisPorPunto[p.id]" class="boton boton--contorno boton--pequeno" type="button"
+                @click="pedirBorrado('punto', p)">Eliminar</button>
             </td>
           </tr>
         </tbody>
@@ -227,7 +253,10 @@ async function guardarEvento() {
             <td>{{ e.nombre }}</td><td>{{ fechaHora(e.inicia_en) }}</td><td>{{ fechaHora(e.termina_en) }}</td>
             <td>{{ ESTADOS_EVENTO[e.estado] }}</td><td>{{ e.publicado ? 'Sí' : 'No' }}</td>
             <td>{{ puntosDe(e.id).map((p) => p.codigo).join(', ') || 'Sin punto' }}</td>
-            <td><button class="boton boton--contorno boton--pequeno" type="button" @click="editarEvento(e)">Editar</button></td>
+            <td class="botones">
+              <button class="boton boton--contorno boton--pequeno" type="button" @click="editarEvento(e)">Editar</button>
+              <button class="boton boton--contorno boton--pequeno" type="button" @click="pedirBorrado('evento', e)">Eliminar</button>
+            </td>
           </tr>
           <tr v-if="!eventos.length"><td colspan="7" class="vacio">No hay eventos.</td></tr>
         </tbody>
@@ -282,6 +311,20 @@ async function guardarEvento() {
         <div class="acciones">
           <button class="boton" type="submit" :disabled="guardando || !!faltaEvento">{{ guardando ? 'Guardando…' : 'Guardar evento' }}</button>
           <button class="boton boton--contorno" type="button" @click="evento = null">Cancelar</button>
+        </div>
+      </form>
+    </Dialogo>
+
+    <Dialogo v-if="borrado" :titulo="`Eliminar ${borrado.titulo}`" :aviso="mensaje" @cerrar="borrado = null">
+      <form @submit.prevent="eliminar">
+        <p>Solo se puede eliminar lo que nunca se usó: sin préstamos y sin bicis. Si ya tuvo préstamos, el sistema no lo
+          permite porque el historial depende de él; en ese caso ciérralo, ocúltalo o cancela el evento.</p>
+        <p v-if="borrado.puntos.length">También se eliminan sus puntos: <strong>{{ borrado.puntos.join(', ') }}</strong>.</p>
+        <p class="nota">No se puede deshacer. Queda en la auditoría con el motivo.</p>
+        <label class="campo"><span>Motivo (queda en la auditoría)</span><input v-model="borrado.motivo" maxlength="500" /></label>
+        <div class="acciones">
+          <button class="boton" type="submit" :disabled="guardando || borrado.motivo.trim().length < 10">Eliminar definitivamente</button>
+          <button class="boton boton--contorno" type="button" @click="borrado = null">Cancelar</button>
         </div>
       </form>
     </Dialogo>

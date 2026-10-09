@@ -246,6 +246,25 @@ test.describe('ventanas de edición (pantalla de portátil)', () => {
   })
 })
 
+test('eliminar un evento nunca usado: avisa sus puntos, pide motivo y llama a eliminar_evento', async ({ page }) => {
+  const llamadas = []
+  await page.setViewportSize({ width: 1366, height: 768 })
+  await simular(page, { llamadas })
+  await ingresar(page, '/admin/puntos')
+  await expect(page.locator('table').first().getByRole('row', { name: /P01/ }).getByRole('button', { name: 'Eliminar' })).toHaveCount(0)
+  await page.locator('table').nth(1).getByRole('button', { name: 'Eliminar' }).click()
+  const ventana = page.getByRole('dialog', { name: 'Eliminar el evento «Ciclopaseo (demo)»' })
+  await expect(ventana).toBeInViewport()
+  await expect(ventana.getByText('También se eliminan sus puntos: E01.')).toBeVisible()
+  const boton = ventana.getByRole('button', { name: 'Eliminar definitivamente' })
+  await expect(boton).toBeDisabled()
+  await ventana.getByLabel('Motivo (queda en la auditoría)').fill('Evento de prueba creado por error')
+  await boton.click()
+  await expect.poll(() => llamadas.find((l) => l.fn === 'eliminar_evento')).toBeTruthy()
+  expect(llamadas.find((l) => l.fn === 'eliminar_evento').cuerpo).toEqual({ p_evento_id: 'ev-1', p_motivo: 'Evento de prueba creado por error' })
+  await expect(page.getByText('Se eliminó el evento «Ciclopaseo (demo)» y sus puntos (E01).')).toBeVisible()
+})
+
 test.describe('ventanas de préstamos y personas (pantalla de portátil)', () => {
   test.use({ viewport: { width: 1366, height: 768 } })
 

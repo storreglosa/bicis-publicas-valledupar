@@ -34,7 +34,7 @@ AUTH_FUNCIONES = {
     "cerrar_punto_evento", "crear_bicicletas", "forzar_devolucion", "marcar_clave_cambiada",
     "mi_perfil", "mover_bicis", "prestamos_activos", "publicar_politica", "registrar_autorizacion",
     "registrar_devolucion", "registrar_exportacion", "registrar_persona_en_punto", "registrar_prestamo",
-    "tablero_resumen", "validar_persona", "vincular_personal", "conservar_foto",
+    "tablero_resumen", "validar_persona", "vincular_personal", "conservar_foto", "eliminar_punto", "eliminar_evento",
 }
 
 # La clave secreta (Edge Functions preinscribir y purgar-fotos) solo ejecuta esto y no toca tablas.

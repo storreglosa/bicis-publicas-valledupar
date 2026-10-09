@@ -58,7 +58,11 @@ export const MENSAJES = {
   punto_taller: 'En el taller no se prestan bicicletas.',
   punto_inactivo: 'Este punto no está activo.',
   punto_cerrado: 'Ese punto está cerrado.',
-  punto_con_bicis: 'Al punto todavía le quedan bicicletas. Muévelas antes de cerrarlo.',
+  punto_con_bicis: 'Al punto todavía le quedan bicicletas. Muévelas antes de cerrarlo o eliminarlo.',
+  punto_con_historial: 'Ese punto ya tuvo préstamos: no se puede eliminar porque el historial depende de él. Ciérralo u ocúltalo.',
+  evento_no_existe: 'Ese evento no existe.',
+  evento_con_bicis: 'Algún punto del evento todavía tiene bicicletas. Muévelas antes de eliminarlo.',
+  evento_con_historial: 'Ese evento ya tuvo préstamos en sus puntos: no se puede eliminar. Cámbialo a Finalizado o Cancelado y desmárcalo como publicado.',
   evento_no_en_curso: 'El evento de este punto no está en curso.',
 
   // Préstamo y devolución
