@@ -14,6 +14,7 @@ const rutas = [
   { path: '/eventos', name: 'eventos', component: () => import('./vistas/publico/Eventos.vue'), meta: { titulo: 'Eventos' } },
   { path: '/inscribirme', name: 'inscribirme', component: () => import('./vistas/publico/Inscribirme.vue'), meta: { titulo: 'Inscribirme' } },
   { path: '/politica-de-datos/:version?', name: 'politica', component: () => import('./vistas/publico/Politica.vue'), meta: { titulo: 'Política de tratamiento de datos' } },
+  { path: '/presentacion', name: 'presentacion', component: () => import('./vistas/publico/Presentacion.vue'), meta: { titulo: 'Presentación' } },
   { path: '/b/:codigo', name: 'bici', component: () => import('./vistas/publico/Bici.vue'), meta: { titulo: 'Bicicleta' } },
 
   // Personal (operadores y administradores)

@@ -23,6 +23,7 @@ const anio = new Date().getFullYear()
 
   <p v-if="esDemo" class="demo" role="note">
     <strong>DEMO — datos ficticios.</strong> Versión de prueba del sistema: no ingreses datos personales reales.
+    <RouterLink to="/presentacion" class="demo__presentar">▶ Presentar</RouterLink>
   </p>
 
   <header class="cabecera">
@@ -86,6 +87,7 @@ const anio = new Date().getFullYear()
   font-size: var(--texto-s);
   text-align: center;
 }
+.demo__presentar { margin-left: var(--esp-2); font-weight: 650; color: var(--primario); white-space: nowrap; }
 .cabecera {
   background: var(--superficie);
   border-bottom: 1px solid var(--linea);
