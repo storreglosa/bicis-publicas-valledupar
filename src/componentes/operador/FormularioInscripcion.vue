@@ -37,7 +37,7 @@ const adultos = computed(() => props.tipos.filter((t) => !t.implica_menor))
 const sexos = [
   ['mujer', 'Mujer'], ['hombre', 'Hombre'], ['otro', 'Otro'], ['prefiere_no_responder', 'Prefiere no responder'],
 ]
-const parentescos = [['madre', 'Madre'], ['padre', 'Padre'], ['representante_legal', 'Representante legal']]
+const parentescos = [['madre', 'Madre'], ['padre', 'Padre'], ['representante_legal', 'Tutor o curador']]
 
 const completo = computed(() => {
   const base = f.numero && f.nombres.trim() && f.apellidos.trim() && telefonoValido(f.telefono) && f.edad && f.sexo

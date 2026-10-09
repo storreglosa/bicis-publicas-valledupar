@@ -57,15 +57,19 @@ const anio = new Date().getFullYear()
       <div>
         <p class="pie__titulo">{{ sitio.nombre }}</p>
         <p>{{ sitio.entidad }} · {{ sitio.alcaldia }}</p>
+        <address class="pie__contacto">
+          {{ sitio.contacto.direccion }}<br />
+          <a :href="`mailto:${sitio.contacto.correo}`">{{ sitio.contacto.correo }}</a><br />
+          {{ sitio.contacto.redes.usuario }} en
+          <a :href="sitio.contacto.redes.instagram" rel="noopener">Instagram</a> y
+          <a :href="sitio.contacto.redes.x" rel="noopener">X</a>
+        </address>
       </div>
       <ul class="pie__enlaces" aria-label="Información legal">
         <li><RouterLink to="/politica-de-datos">Política de tratamiento de datos</RouterLink></li>
         <li><RouterLink to="/reglas">Términos y condiciones de uso</RouterLink></li>
-        <li>
-          <a v-if="sitio.contacto.pqrsdUrl" :href="sitio.contacto.pqrsdUrl" rel="noopener">PQRSD</a>
-          <span v-else>PQRSD: canal por definir</span>
-        </li>
-        <li>© {{ anio }} {{ sitio.alcaldia }}. Derechos de autor por definir.</li>
+        <li><a :href="`mailto:${sitio.contacto.correo}?subject=${encodeURIComponent('PQRSD - Bicis Públicas')}`">PQRSD: peticiones, quejas, reclamos, sugerencias y denuncias</a></li>
+        <li>© {{ anio }} {{ sitio.alcaldia }} · {{ sitio.entidad }}</li>
         <li v-if="!sesion.perfil"><RouterLink to="/ingresar">Módulo operación</RouterLink></li>
       </ul>
     </div>
@@ -152,6 +156,9 @@ main { min-height: 60vh; outline: none; }
 }
 .pie__titulo { font-weight: 650; color: var(--tinta-1); margin-bottom: var(--esp-1); }
 .pie__enlaces { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--esp-2); }
+.pie__contacto { font-style: normal; margin-top: var(--esp-3); line-height: 1.6; }
+/* El correo institucional es largo y sin espacios: en 320 px debe poder partirse. */
+.pie__contacto a, .pie__enlaces a { overflow-wrap: anywhere; }
 
 @media (max-width: 480px) {
   .marca img { width: 84px; height: auto; }

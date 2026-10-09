@@ -7,12 +7,12 @@ export default {
   entidad: 'Secretaría de Tránsito y Transporte de Valledupar',
   alcaldia: 'Alcaldía de Valledupar',
 
-  // Por definir con la STTV antes del piloto. Mientras sean null, el pie de
-  // página muestra "por definir" en lugar de un enlace roto.
+  // Canal oficial de la Secretaría (lo entregó Santiago el 2026-10-09). El correo
+  // es también el canal de PQRSD y de datos personales (política §1 y §10).
   contacto: {
-    correo: null,
-    telefono: null,
-    pqrsdUrl: null,
+    correo: 'atencionusuariotransito@valledupar-cesar.gov.co',
+    direccion: 'Calle 16A # 10-24, Centro, Valledupar, Cesar',
+    redes: { instagram: 'https://www.instagram.com/sectransitovpar/', x: 'https://x.com/sectransitovpar', usuario: '@sectransitovpar' },
   },
 
   urlPublica: 'https://storreglosa.github.io/bicis-publicas-valledupar/',

@@ -172,14 +172,14 @@ test('un menor sin autorización presencial exige que el acudiente autorice en e
   await page.getByLabel('Número del documento').fill('00200001')
   await page.getByRole('button', { name: 'Buscar' }).click()
 
-  await expect(page.getByText(/autoriza su acudiente, Rosa Acudiente Demo/)).toBeVisible()
+  await expect(page.getByText(/autoriza su representante legal, Rosa Acudiente Demo/)).toBeVisible()
   await page.getByText('Vi el documento original').click()
   const continuar = page.getByRole('button', { name: 'Continuar', exact: true })
   await expect(continuar).toBeDisabled()                      // faltan las casillas del acudiente
   await page.getByText('Autorizo el tratamiento de mis datos (demo).').click()
   await page.getByText('Autorizo la foto de evidencia (demo).').click()
   await expect(continuar).toBeDisabled()                      // falta la constancia de escuchar al menor
-  await page.getByText(/escuchó la opinión del menor/).click()
+  await page.getByText(/declara que escuchó su opinión/).click()
   await page.screenshot({ path: 'capturas/e2e-7-menor.png', fullPage: true })
   await continuar.click()
 

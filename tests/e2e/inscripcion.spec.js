@@ -73,14 +73,15 @@ test('preinscripción: casillas sin marcar, envía datos y autorización, y conf
   expect(errores).toEqual([])
 })
 
-test('preinscripción de un menor: pide acudiente y su declaración', async ({ page }) => {
+test('preinscripción de un menor: pide al representante legal y su declaración', async ({ page }) => {
   const envios = await simular(page)
   await page.goto('#/inscribirme')
   await llenarAdulto(page)
   await page.getByLabel('Tipo de documento').first().selectOption('TI')   // aparece el bloque del acudiente
   await page.getByLabel('Edad', { exact: true }).fill('14')
-  await expect(page.getByRole('group', { name: 'Acudiente' })).toBeVisible()
-  const acu = page.getByRole('group', { name: 'Acudiente' })
+  await expect(page.getByRole('group', { name: 'Representante legal del menor' })).toBeVisible()
+  await expect(page.getByText('Responder los datos del menor es voluntario')).toBeVisible()
+  const acu = page.getByRole('group', { name: 'Representante legal del menor' })
   await acu.getByLabel('Parentesco').selectOption('madre')
   await acu.getByLabel('Número').fill('00900001')
   await acu.getByLabel('Nombres').fill('Madre')
@@ -88,11 +89,11 @@ test('preinscripción de un menor: pide acudiente y su declaración', async ({ p
   await acu.getByLabel('Celular').fill('3000000009')
   await page.getByText(POLITICA.texto_autorizacion).click()
   await page.getByText(POLITICA.texto_autorizacion_foto).click()
-  await expect(page.getByText(/falta la declaración del acudiente/)).toBeVisible()
-  await page.getByText(/escuché la opinión del menor/).click()
+  await expect(page.getByText(/falta la declaración del representante legal/)).toBeVisible()
+  await page.getByText(/declaro que escuché su opinión/).click()
   await page.getByRole('button', { name: 'Inscribirme' }).click()
   await expect(page.getByText('Listo: quedaste preinscrito.')).toBeVisible()
-  await expect(page.getByText(/Ve con tu acudiente/)).toBeVisible()
+  await expect(page.getByText(/Ve con tu representante legal/)).toBeVisible()
   expect(envios[0].persona.acudiente).toMatchObject({ tipo_documento: 'CC', numero_documento: '00900001', parentesco: 'madre' })
   expect(envios[0].persona.autorizacion.menor_escuchado).toBe(true)
 })

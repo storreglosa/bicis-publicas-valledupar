@@ -17,7 +17,7 @@ const esDemo = import.meta.env.VITE_DEMO === '1'
 const { tipos, politica, fotoPersonaObligatoria, error: errorCatalogos, listo } = useCatalogos()
 
 const SEXOS = [['mujer', 'Mujer'], ['hombre', 'Hombre'], ['otro', 'Otro'], ['prefiere_no_responder', 'Prefiero no responder']]
-const PARENTESCOS = [['madre', 'Madre'], ['padre', 'Padre'], ['representante_legal', 'Representante legal']]
+const PARENTESCOS = [['madre', 'Madre'], ['padre', 'Padre'], ['representante_legal', 'Tutor o curador']]
 
 function vacio() {
   // Identificadores fijos por formulario: un reintento tras un fallo de red no duplica.
@@ -51,10 +51,10 @@ const falta = computed(() => {
   if (esMenor.value) {
     const a = f.acu
     if (!a.numero.trim() || !a.nombres.trim() || !a.apellidos.trim() || !telefonoValido(a.telefono) || !a.parentesco) {
-      return 'los datos completos del acudiente'
+      return 'los datos completos del representante legal'
     }
-    if (esDemo && !ficticio(a.numero)) return 'un documento inventado del acudiente que empiece por 00 (versión de prueba)'
-    if (!f.aut.menorEscuchado) return 'la declaración del acudiente sobre la opinión del menor'
+    if (esDemo && !ficticio(a.numero)) return 'un documento inventado del representante legal que empiece por 00 (versión de prueba)'
+    if (!f.aut.menorEscuchado) return 'la declaración del representante legal sobre la opinión del menor'
   }
   if (!f.aut.tratamiento) return 'la autorización de tratamiento de datos'
   if (fotoPersonaObligatoria.value && !f.aut.foto) return 'la autorización de la foto (sin ella no se puede prestar)'
@@ -115,7 +115,7 @@ function otraPersona() {
     <div v-if="resultado === 'inscrito'" class="tarjeta-base resultado" role="status">
       <p class="resultado__titulo">Listo: quedaste preinscrito.</p>
       <p>La primera vez que vayas a prestar una bici, muéstrale tu <strong>documento original</strong> al operador
-        en el punto para validar tu inscripción.<template v-if="esMenor"> Ve con tu acudiente: debe presentar su
+        en el punto para validar tu inscripción.<template v-if="esMenor"> Ve con tu representante legal: debe presentar su
         documento y autorizar en persona.</template></p>
       <div class="acciones">
         <RouterLink to="/mapa" class="boton">Ver puntos y bicis disponibles</RouterLink>
@@ -167,9 +167,11 @@ function otraPersona() {
         </div>
 
         <fieldset v-if="esMenor" class="grupo">
-          <legend>Acudiente</legend>
-          <p class="mensaje mensaje--aviso"><span>Eres menor de edad: tu madre, padre o representante legal debe llenar
-            esta parte contigo y acompañarte al punto la primera vez, con su documento original.</span></p>
+          <legend>Representante legal del menor</legend>
+          <p class="mensaje mensaje--aviso"><span>Eres menor de edad: tu representante legal (madre, padre, tutor o curador)
+            debe llenar esta parte contigo y acompañarte al punto la primera vez, con su documento original, para
+            ratificar la autorización en persona.</span></p>
+          <p class="nota">Responder los datos del menor es voluntario; sin ellos no es posible inscribirlo en el servicio.</p>
           <div class="fila-campos">
             <label class="campo"><span>Parentesco</span>
               <select v-model="f.acu.parentesco"><option value="" disabled>Elige…</option>
@@ -187,13 +189,13 @@ function otraPersona() {
 
         <fieldset class="grupo">
           <legend>Autorización de datos personales <small>(política v{{ politica.version }})</small></legend>
-          <p class="nota">Léela y marca solo si estás de acuerdo{{ esMenor ? ' (la marca tu acudiente)' : '' }}.
+          <p class="nota">Léela y marca solo si estás de acuerdo{{ esMenor ? ' (la marca tu representante legal)' : '' }}.
             Texto completo: <RouterLink :to="`/politica-de-datos/${politica.version}`" target="_blank">política de tratamiento de datos</RouterLink>.</p>
           <label class="casilla"><input v-model="f.aut.tratamiento" type="checkbox" /><span>{{ politica.texto_autorizacion }}</span></label>
           <label class="casilla"><input v-model="f.aut.foto" type="checkbox" />
             <span>{{ politica.texto_autorizacion_foto }}<small v-if="fotoPersonaObligatoria"> (necesaria para prestar)</small></span></label>
           <label v-if="esMenor" class="casilla"><input v-model="f.aut.menorEscuchado" type="checkbox" />
-            <span>Como acudiente, declaro que escuché la opinión del menor antes de autorizar y la tuve en cuenta.</span></label>
+            <span>Como representante legal del menor (madre, padre, tutor o curador), declaro que escuché su opinión antes de otorgar esta autorización y que la tuve en cuenta.</span></label>
         </fieldset>
 
         <Turnstile ref="verificacion" v-model="token" :clave-sitio="claveSitio" />

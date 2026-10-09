@@ -224,3 +224,35 @@ def test_purgar_preinscripciones_anonimiza_solo_las_viejas_sin_validar(bd):
     # Nadie la encuentra por su documento real.
     bd.como(bd.d.op1)
     assert bd.rpc("buscar_persona", p_tipo="CC", p_numero="00100001") is None
+
+
+def test_anonimiza_a_quien_no_presta_en_el_plazo_y_respeta_las_excepciones(bd):
+    """Política v1.0 §8: sin préstamos durante N meses → anonimizada; salvo préstamo activo,
+    sanción vigente o novedad abierta. Si nunca prestó, cuenta desde la validación."""
+    vieja = bd.persona("00100001", validar_con=bd.d.op1)          # prestó hace 30 meses
+    _prestamo_devuelto(bd, vieja, 1, hace_dias=30 * 31)
+    nunca = bd.persona("00100002", validar_con=bd.d.op1)          # validada hace 30 meses, nunca prestó
+    reciente = bd.persona("00100003", validar_con=bd.d.op1)       # prestó hace 2 meses
+    _prestamo_devuelto(bd, reciente, 2, hace_dias=60)
+    sancionada = bd.persona("00100004", validar_con=bd.d.op1)     # inactiva pero con sanción vigente
+    _prestamo_devuelto(bd, sancionada, 3, hace_dias=30 * 31)
+    con_novedad = bd.persona("00100005", validar_con=bd.d.op1)    # inactiva con novedad abierta
+    _prestamo_devuelto(bd, con_novedad, 4, hace_dias=30 * 31, con_novedad=True)
+    bd.como("dueno")
+    bd.sql("update public.personas set validada_en = now() - interval '30 months' where id = any(%s)",
+           ([vieja, nunca, sancionada, con_novedad],))
+    bd.sql("insert into public.sanciones (persona_id, tipo, motivo, desde, hasta, impuesta_por) "
+           "values (%s, 'suspension', 'Motivo de prueba suficiente', current_date, current_date + 30, %s)",
+           (sancionada, bd.d.admin))
+    bd.parametro("retencion.preinscripcion_sin_validar_dias", None)
+    bd.parametro("retencion.anonimizar_inactivos_meses", 24)
+
+    assert bd.uno("select privado.purgar_preinscripciones()") == 2
+    estados = dict(bd.sql("select id, estado from public.personas"))
+    assert estados[vieja] == estados[nunca] == "anonimizada"
+    assert estados[reciente] == estados[sancionada] == estados[con_novedad] == "validada"
+    # El préstamo se conserva, sin identidad.
+    assert bd.uno("select count(*) from public.prestamos where persona_id = %s", (vieja,)) == 1
+    assert bd.uno("select nombres from public.personas where id = %s", (vieja,)) == "Anonimizada"
+    detalle = bd.uno("select detalle from privado.ejecuciones_tareas where tarea = 'purgar_preinscripciones' order by id desc limit 1")
+    assert detalle["inactivas_anonimizadas"] == 2 and detalle["plazo_meses"] == 24

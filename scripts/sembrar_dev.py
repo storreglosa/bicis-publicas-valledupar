@@ -52,8 +52,7 @@ def politica_demo() -> tuple[str, str, str, str]:
     cuerpo, _, casillas = texto.partition("## Textos de autorización")
     citas = re.findall(r"^> (.+(?:\n> .+)*)", casillas, flags=re.M)
     limpiar = lambda c: re.sub(r"\n> ", " ", c).strip()
-    aviso = "**BORRADOR DE DEMOSTRACIÓN — no es la política vigente de la Secretaría.**\n\n"
-    return version, aviso + cuerpo.strip(), limpiar(citas[0]), limpiar(citas[1])
+    return version, cuerpo.strip(), limpiar(citas[0]), limpiar(citas[1])
 
 
 def main() -> None:

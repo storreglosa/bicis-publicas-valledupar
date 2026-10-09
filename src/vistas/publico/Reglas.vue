@@ -81,7 +81,7 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
          el art. 95 vigente (texto de la Ley 1811 de 2016) dice «transitar ocupando un carril» y «en grupo
          deberán ocupar un carril». Hasta que Jurídica defina cómo comunicarlo, no se publica ninguna versión. -->
     <ul>
-      <li>Circula por la calzada: nunca por los andenes ni por los carriles exclusivos del transporte público.</li>
+      <li>Usa las ciclorrutas donde existan; fuera de ellas, circula por la calzada. Nunca por los andenes ni por las vías exclusivas del transporte público.</li>
       <li>Respeta las señales de tránsito, los semáforos y los límites de velocidad.</li>
       <li>No te sujetes de otros vehículos ni lleves acompañante si la bicicleta no tiene un dispositivo diseñado para eso.</li>
       <li>Usa las señales con el brazo para indicar giros.</li>
@@ -94,9 +94,8 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
       <li>Ponte a salvo y, si hay heridos, llama a la línea de emergencias 123.</li>
       <li>Denuncia el hurto ante la Policía o la Fiscalía.</li>
       <li>
-        Avisa a la Secretaría de Tránsito:
-        <a v-if="sitio.contacto.pqrsdUrl" :href="sitio.contacto.pqrsdUrl" rel="noopener">canal de PQRSD</a>
-        <span v-else>canal por definir</span>.
+        Avisa a la Secretaría de Tránsito y Transporte con el código de la bicicleta:
+        <a :href="`mailto:${sitio.contacto.correo}?subject=${encodeURIComponent('Hurto o accidente - Bicis Públicas')}`" class="correo">{{ sitio.contacto.correo }}</a>.
       </li>
     </ol>
   </section>
@@ -104,6 +103,7 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
 
 <style scoped>
 .pagina { padding-block: var(--esp-6); }
+.correo { overflow-wrap: anywhere; }
 .texto-largo { max-width: 46rem; }
 .texto-largo h2 { margin-top: var(--esp-6); }
 .grupo dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--esp-2) var(--esp-4); margin: 0; }

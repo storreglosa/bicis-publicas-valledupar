@@ -1,22 +1,28 @@
-<!-- BORRADOR v0.3 para revisión de la Oficina Jurídica. NO publicar sin su aprobación.
-     Redactado el 2026-10-07 como insumo técnico. Citas verificadas el mismo día por el agente
-     verificador-normativo y corregidas (docs/revisiones/2026-10-07_verificacion-normativa-politica-y-reglas.md);
-     v0.3 (2026-10-08): plazo de los reclamos incompletos (§10) y anonimización de preinscripciones (§8), según
-     docs/revisiones/2026-10-08_verificacion-normativa-inscripcion.md; los puntos de su §6 los decide Jurídica;
-     Jurídica debe cotejarlas con el Diario Oficial. Los datos entre [corchetes] los
-     completa la entidad. Cuando se apruebe, el texto se publica desde el panel de
-     administración (publicar_politica) y queda versionado e inmutable. -->
+<!-- Versión 1.0 (2026-10-09), redactada con los datos de contacto de la Secretaría de Tránsito y Transporte que
+     entregó Santiago y con las correcciones de las verificaciones normativas del 2026-10-07 y del 2026-10-08
+     (docs/revisiones/). Es la que publica la DEMO. Antes del piloto con datos reales debe tener el concepto de
+     la Oficina Jurídica (docs/privado/: solicitud de concepto). Puntos que Jurídica debe confirmar, sin texto
+     visible de «pendiente»:
+     - Si la foto de la persona con la bicicleta es dato sensible (biométrico) y puede ser requisito para prestar
+       (Ley 1581 art. 5; D. 1377 art. 6). Santiago decidió mantenerla en cada préstamo.
+     - Contrato de transmisión con los encargados (D. 1377 art. 25) y versión vigente de la lista de países con
+       nivel adecuado de la SIC.
+     - Si basta uno de los padres y qué prueba de la representación se pide en el punto (D. 1377 art. 20).
+     - Teléfono del responsable (Ley 1581 art. 12 lit. d): no se publicó porque no se tiene uno verificado.
+     Cuando se apruebe, el texto se publica desde el panel de administración (publicar_politica) y queda
+     versionado e inmutable. -->
 
-# Política de tratamiento de datos personales — Sistema de Bicicletas Públicas de Valledupar
+# Política de tratamiento de datos personales — Bicis Públicas Valledupar
 
-**Versión:** 0.3 (borrador) · **Vigente desde:** [fecha de aprobación]
+**Versión:** 1.0 · **Vigente desde:** 9 de octubre de 2026
 
 ## 1. Responsable del tratamiento
 
-[Responsable: lo define Jurídica — p. ej. Municipio de Valledupar, a través de la Secretaría de Tránsito y
-Transporte], NIT [por completar], con domicilio en
-[dirección], Valledupar, Cesar. Correo de contacto para asuntos de datos personales: [correo institucional].
-Teléfono: [por completar].
+**Alcaldía de Valledupar**, a través de la **Secretaría de Tránsito y Transporte de Valledupar**.
+
+- Dirección: Calle 16A # 10-24, Centro, Valledupar, Cesar.
+- Correo para asuntos de datos personales y PQRSD: atencionusuariotransito@valledupar-cesar.gov.co
+- Redes sociales: @sectransitovpar en Instagram y en X.
 
 ## 2. Marco legal
 
@@ -29,20 +35,22 @@ complementen.
 Para prestar el servicio de bicicletas públicas recogemos únicamente:
 
 - **Identificación:** tipo y número de documento, nombres y apellidos.
-- **Contacto:** teléfono y, si lo tiene, correo electrónico.
+- **Contacto:** celular y, si lo tiene, correo electrónico.
 - **Edad declarada** y **sexo / género**.
-- **Si la persona es menor de edad:** identificación, contacto y parentesco de su madre, padre o representante legal.
-- **Registro de uso:** cada préstamo y devolución (bicicleta, punto, fecha y hora, operador que lo registró, novedades).
-- **Foto de evidencia del préstamo:** una fotografía de la persona con la bicicleta, tomada por el operador al
-  momento de entregarla. [Pendiente: concepto de Jurídica sobre si la imagen constituye dato biométrico y, por
-  tanto, sensible (Ley 1581 de 2012, art. 5) y, en consecuencia, si puede ser requisito para el préstamo, dado que
-  ninguna actividad puede condicionarse a entregar datos sensibles (D. 1377 de 2013, art. 6; D. 1074 de 2015,
-  art. 2.2.2.25.2.3).]
+- **Si la persona es menor de edad:** identificación, contacto y parentesco de su representante legal (madre,
+  padre, tutor o curador).
+- **Registro de uso:** cada préstamo y devolución (bicicleta, punto, fecha y hora, operador que lo registró,
+  novedades).
+- **Foto de evidencia del préstamo:** en cada préstamo, el operador toma una fotografía de la persona que presta
+  junto con la bicicleta, como evidencia de la entrega.
+- **Datos técnicos del formulario de preinscripción:** un servicio de verificación anti-robots procesa datos
+  técnicos de su conexión y de su navegador (como la dirección IP) para comprobar que quien escribe es una
+  persona. El sistema no guarda su dirección IP: guarda solo una huella cifrada e irreversible durante dos (2)
+  días, para limitar el número de intentos.
 
-Fuera de la foto de evidencia, cuya naturaleza está en revisión, no recogemos datos de salud, afiliación a
-seguridad social, origen étnico, ubicación del celular ni otros datos sensibles. El documento de identidad solo se
-**exhibe** al operador para verificarlo; **nunca se retiene** (Decreto Ley 2150 de 1995, art. 18, modificado por
-la Ley 962 de 2005, art. 23).
+No recogemos datos de salud, afiliación a seguridad social, origen étnico ni la ubicación de su celular. El
+documento de identidad solo se **exhibe** al operador para verificarlo; **nunca se retiene** (Decreto Ley 2150
+de 1995, art. 18, modificado por la Ley 962 de 2005, art. 23).
 
 ## 4. Finalidades
 
@@ -52,26 +60,31 @@ Los datos se usan exclusivamente para:
 2. Registrar los préstamos y devoluciones y saber quién tiene cada bicicleta en cada momento.
 3. Gestionar novedades: daños, accidentes, pérdidas o hurtos de bicicletas.
 4. Aplicar las reglas de uso del sistema y, cuando corresponda, las sanciones previstas en el reglamento.
-5. Contactar a la persona (o a su acudiente) en relación con un préstamo en curso o una novedad.
+5. Contactar a la persona (o a su representante legal) en relación con un préstamo en curso o una novedad.
 6. Producir estadísticas **anonimizadas y agregadas** sobre el uso del sistema (por ejemplo, préstamos por
    punto, hora, rango de edad o sexo / género) para la planeación de la movilidad de la ciudad.
 
-Los datos no se venden, no se usan con fines comerciales ni se comparten con terceros distintos del encargado
-indicado en el numeral 7.
+Los datos no se venden, no se usan con fines comerciales ni se comparten con terceros distintos de los
+encargados indicados en el numeral 7.
 
 ## 5. Niñas, niños y adolescentes
 
-Los menores de edad pueden usar el sistema solo con la autorización de su madre, padre o representante legal,
-quien la otorga **en persona**, en un punto de préstamo, después de que el menor haya ejercido su derecho a ser
-escuchado; su opinión se valora según su madurez, autonomía y capacidad para entender el asunto. El tratamiento
-responde y respeta el interés superior del menor, asegura el respeto de sus derechos fundamentales y se limita a
-los datos necesarios para prestarle el servicio de forma segura (Ley 1581 de 2012, art. 7, en la interpretación de
-la Corte Constitucional, sentencia C-748 de 2011; Decreto 1377 de 2013, art. 12; D. 1074 de 2015,
-art. 2.2.2.25.2.9).
+Los menores de edad pueden usar el sistema solo con la autorización de su representante legal (madre, padre,
+tutor o curador), después de que el menor haya ejercido su derecho a ser escuchado; su opinión se valora según su
+madurez, autonomía y capacidad para entender el asunto. El tratamiento responde y respeta el interés superior del
+menor, asegura el respeto de sus derechos fundamentales y se limita a los datos necesarios para prestarle el
+servicio de forma segura (Ley 1581 de 2012, art. 7, en la interpretación de la Corte Constitucional, sentencia
+C-748 de 2011; Decreto 1377 de 2013, art. 12; D. 1074 de 2015, art. 2.2.2.25.2.9).
+
+- La preinscripción en línea de un menor la diligencia y la autoriza su representante legal. La primera vez, el
+  representante debe acompañar al menor al punto de préstamo, presentar su documento original y ratificar la
+  autorización **en persona**; sin ese paso el menor no puede prestar.
+- Responder las preguntas sobre los datos de niñas, niños y adolescentes es **facultativo**; sin embargo, sin
+  esos datos no es posible inscribir al menor en el servicio (Ley 1581 de 2012, art. 12, lit. b).
 
 ## 6. Derechos del titular
 
-Como titular de los datos (o su representante, si es menor de edad), usted puede:
+Como titular de los datos (o su representante legal, si es menor de edad; D. 1377 de 2013, art. 20), usted puede:
 
 - Conocer, actualizar y rectificar sus datos.
 - Solicitar prueba de la autorización que otorgó.
@@ -85,27 +98,35 @@ Como titular de los datos (o su representante, si es menor de edad), usted puede
 
 (Ley 1581 de 2012, art. 8.)
 
-## 7. Encargado del tratamiento y transmisión internacional
+## 7. Encargados del tratamiento y transmisión internacional
 
-La base de datos se aloja en un servicio de nube contratado por la entidad (Supabase), que actúa como
-**encargado** del tratamiento, con servidores en los **Estados Unidos de América**, país incluido en la lista de
-países con nivel adecuado de protección de la Superintendencia de Industria y Comercio (Circular Única SIC,
-Título V, Capítulo 3, num. 3.2 — Jurídica confirma la versión vigente a la fecha de firma). La transmisión se
-rige por un contrato de transmisión de datos en los términos del artículo 25 del Decreto 1377 de 2013
+El sistema usa tres proveedores tecnológicos que actúan como **encargados** del tratamiento, con servidores en
+los **Estados Unidos de América**, país incluido en la lista de países con nivel adecuado de protección de la
+Superintendencia de Industria y Comercio:
+
+- **Supabase:** aloja la base de datos y el almacenamiento privado de las fotos de evidencia.
+- **Cloudflare (Turnstile):** hace la verificación anti-robots del formulario de preinscripción; procesa la
+  dirección IP y datos técnicos del navegador.
+- **GitHub (GitHub Pages):** aloja la página web; como cualquier servidor web, registra datos técnicos de las
+  visitas, como la dirección IP.
+
+La transmisión de datos a estos encargados se realiza en los términos del artículo 25 del Decreto 1377 de 2013
 (D. 1074 de 2015, art. 2.2.2.25.5.2).
-[Pendiente: revisión del acuerdo de tratamiento de datos (DPA) del proveedor por parte de Jurídica.]
 
 ## 8. Conservación
 
-- Las **fotos de evidencia** de los préstamos devueltos sin novedad se eliminan automáticamente a los
-  [N] días de la devolución. Las de préstamos con novedad (daño, pérdida, hurto, accidente) se conservan mientras
-  se resuelve el caso.
-- Las **preinscripciones** que nunca se validan en un punto se **anonimizan** a los [N] días: se reemplazan el
-  nombre, el documento, el celular y el correo (y los del acudiente, si ya no responde por nadie más); se
-  conservan solo la edad declarada y el sexo/género, sin identidad. <!-- Jurídica: confirmar si anonimizar
-  cumple lo que aquí se promete como supresión (verificación 2026-10-08, P-3). -->
-- Los datos de personas sin préstamos durante [N] meses se **anonimizan**: se conserva el registro estadístico
-  del uso, pero no la identidad.
+- Las **fotos de evidencia** de los préstamos devueltos sin novedad, o anulados, se eliminan automáticamente a
+  los siete (7) días. Se conservan mientras se resuelve el caso las de los préstamos con novedad (daño, pérdida,
+  hurto, accidente), la del último préstamo de una bicicleta que se reporte dañada o perdida, y las que la
+  Secretaría deba conservar para atender un reclamo.
+- Las **preinscripciones** que nunca se validan en un punto se **anonimizan** a los noventa (90) días: se
+  reemplazan el nombre, el documento, el celular y el correo (y los del representante legal, si ya no responde
+  por nadie más); se conservan solo la edad declarada y el sexo / género, sin identidad.
+- Los datos de las personas que no presten una bicicleta durante veinticuatro (24) meses se **anonimizan** de la
+  misma forma; el registro de sus préstamos se conserva sin identidad, solo para estadísticas.
+- La huella de la dirección IP del formulario de preinscripción se borra a los dos (2) días.
+- Las copias de respaldo cifradas de la base de datos se conservan hasta doce (12) meses.
+- El registro de auditoría guarda huellas cifradas en lugar de los datos personales.
 
 ## 9. Seguridad
 
@@ -116,26 +137,26 @@ de respaldo cifradas.
 
 ## 10. Cómo ejercer sus derechos
 
-Envíe su consulta o reclamo a [correo institucional] o a través del canal de PQRSD de la Alcaldía de
-Valledupar: [enlace]. Área responsable de atender las peticiones: [dependencia].
+Envíe su consulta o reclamo al correo **atencionusuariotransito@valledupar-cesar.gov.co** o radíquelo en la
+Secretaría de Tránsito y Transporte de Valledupar, Calle 16A # 10-24, Centro, Valledupar. La Secretaría de
+Tránsito y Transporte es el área responsable de atender estas peticiones.
 
 - **Consultas** (conocer qué datos suyos tenemos y cómo se usan): se responden en máximo diez (10) días hábiles.
   Si no es posible, se le informan los motivos y la fecha de respuesta, que no supera cinco (5) días hábiles más.
 - **Reclamos** (corregir, actualizar o suprimir datos, revocar la autorización o denunciar un incumplimiento): la
   solicitud debe incluir su identificación, la descripción de los hechos, una dirección para la respuesta y los
-  documentos que quiera hacer valer. Si el reclamo está incompleto, se le pedirá completarlo dentro de los cinco (5)
-  días siguientes a su recepción; si pasan dos (2) meses desde ese requerimiento sin que lo complete, se entiende
-  que desistió (Ley 1581 de 2012, art. 15 num. 1). Se resuelve en máximo
-  quince (15) días hábiles; si no es posible, se le informan los motivos y la fecha de respuesta, que no supera
-  ocho (8) días hábiles más.
+  documentos que quiera hacer valer. Si el reclamo está incompleto, se le pedirá completarlo dentro de los cinco
+  (5) días siguientes a su recepción; si pasan dos (2) meses desde ese requerimiento sin que lo complete, se
+  entiende que desistió. Se resuelve en máximo quince (15) días hábiles; si no es posible, se le informan los
+  motivos y la fecha de respuesta, que no supera ocho (8) días hábiles más.
 
 (Ley 1581 de 2012, arts. 14 y 15; la supresión y la revocatoria se tramitan como reclamo: D. 1377 de 2013, art. 9.)
 
 ## 11. Vigencia
 
-Esta política rige desde [fecha]. La base de datos tendrá la vigencia del programa de bicicletas públicas
-[Jurídica: confirmar si esta vigencia indeterminada cumple el D. 1377 de 2013, art. 13 num. 6, o fijar un plazo]. Los
-cambios sustanciales se comunicarán antes de implementarse y, si cambian las finalidades, se pedirá una nueva
+Esta política rige desde el 9 de octubre de 2026. Los datos se tratan mientras funcione el programa de
+bicicletas públicas y, en todo caso, solo durante los plazos de conservación del numeral 8. Los cambios
+sustanciales se publicarán en esta página antes de aplicarse y, si cambian las finalidades, se pedirá una nueva
 autorización.
 
 ---
@@ -144,18 +165,18 @@ autorización.
 
 **Autorización de tratamiento** (obligatoria, sin marcar por defecto):
 
-> Autorizo a [Responsable, igual que en el numeral 1] para tratar mis datos personales (o los del
-> menor que represento) con las finalidades descritas en la Política de tratamiento de datos personales versión
-> [X], que he leído. Conozco mis derechos a conocer, actualizar, rectificar y suprimir mis datos y a revocar esta
-> autorización.
+> Autorizo a la Alcaldía de Valledupar, a través de la Secretaría de Tránsito y Transporte, para tratar mis
+> datos personales (o los del menor que represento) con las finalidades descritas en la Política de tratamiento
+> de datos personales versión 1.0, que he leído. Conozco mis derechos a conocer, actualizar, rectificar y
+> suprimir mis datos y a revocar esta autorización.
 
 **Autorización de la foto de evidencia** (sin marcar por defecto):
 
-> Autorizo que el operador tome una fotografía mía (o del menor que represento) con la bicicleta al momento del
-> préstamo, como evidencia de la entrega. La foto se guarda en un almacenamiento privado y se elimina
-> automáticamente a los [N] días de devolver la bicicleta sin novedad.
+> Autorizo que en cada préstamo el operador me tome una fotografía (o al menor que represento) junto con la
+> bicicleta, como evidencia de la entrega. La foto se guarda en un almacenamiento privado y se elimina
+> automáticamente a los siete (7) días de devolver la bicicleta sin novedad.
 
-**Constancia para menores** (la marca el acudiente):
+**Constancia para menores** (la marca el representante legal):
 
-> Declaro que soy [madre / padre / representante legal] del menor, que escuché su opinión antes de otorgar esta
-> autorización y que la tuve en cuenta.
+> Como representante legal del menor (madre, padre, tutor o curador), declaro que escuché su opinión antes de
+> otorgar esta autorización y que la tuve en cuenta.

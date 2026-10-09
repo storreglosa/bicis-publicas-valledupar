@@ -5,7 +5,6 @@ import { asegurarSesion, sesion } from './lib/sesion.js'
 // Modo hash: GitHub Pages no reescribe rutas, así que #/mapa funciona al
 // recargar o compartir el enlace sin trucos de 404.html.
 
-const enConstruccion = () => import('./vistas/publico/EnConstruccion.vue')
 const personal = { rol: 'personal' }
 
 const rutas = [
@@ -44,7 +43,7 @@ const rutas = [
     ],
   },
 
-  { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: enConstruccion, meta: { titulo: 'Página no encontrada' } },
+  { path: '/:pathMatch(.*)*', name: 'no-encontrada', component: () => import('./vistas/publico/NoEncontrada.vue'), meta: { titulo: 'Página no encontrada' } },
 ]
 
 // Muestrario de la paleta: solo en desarrollo (punto de control C0).

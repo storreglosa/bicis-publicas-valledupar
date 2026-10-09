@@ -2,7 +2,7 @@
 import sitio from '../../../sitio.config.js'
 
 const pasos = [
-  { n: 1, titulo: 'Inscríbete', texto: 'Llena el formulario en línea una sola vez. Si eres menor de edad, te inscribe tu acudiente.' },
+  { n: 1, titulo: 'Inscríbete', texto: 'Llena el formulario en línea una sola vez. Si eres menor de edad, te inscribe tu representante legal (madre, padre, tutor o curador).' },
   { n: 2, titulo: 'Ve a un punto con tu documento', texto: 'El operador verifica tu documento (solo lo mira; no se lo queda) y te entrega una bicicleta.' },
   { n: 3, titulo: 'Pedalea y devuélvela', texto: 'Devuélvela en un punto habilitado. El operador revisa que llegue en buen estado.' },
 ]

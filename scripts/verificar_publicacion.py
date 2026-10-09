@@ -29,6 +29,7 @@ PERMITIDOS = {
     "noreply@anthropic.com": "atribución de commits (Co-Authored-By)",
     "125851405+storreglosa@users.noreply.github.com": "dirección privada de GitHub (no expone el correo real)",
     "user@example.com": "ejemplo genérico",
+    "atencionusuariotransito@valledupar-cesar.gov.co": "canal institucional público de la Secretaría (PQRSD y datos personales)",
     # Celulares ficticios de las pruebas (tests/bd), patrón 300000000x / repetidos
     "3000000000": "ficticio de pruebas", "3000000001": "ficticio de pruebas",
     "3000000009": "ficticio de pruebas", "3009998877": "ficticio de pruebas",

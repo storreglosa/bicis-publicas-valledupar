@@ -16,10 +16,10 @@ const modelo = defineModel({ type: Object, required: true })
     <legend>Autorización de datos personales <small>(política v{{ politica.version }})</small></legend>
     <p v-if="esMenor" class="mensaje mensaje--aviso">
       <span>Es menor de edad: autoriza su
-        {{ acudiente ? `acudiente, ${acudiente.nombres} ${acudiente.apellidos},` : 'acudiente' }}
+        {{ acudiente ? `representante legal, ${acudiente.nombres} ${acudiente.apellidos},` : 'representante legal' }}
         <strong>presente en el punto</strong> con su documento original.</span>
     </p>
-    <p class="leer">Lee en voz alta y marca solo si la persona {{ esMenor ? '(el acudiente)' : '' }} acepta:</p>
+    <p class="leer">Lee en voz alta y marca solo si la persona {{ esMenor ? '(su representante legal)' : '' }} acepta:</p>
     <label class="casilla">
       <input v-model="modelo.tratamiento" type="checkbox" />
       <span>{{ politica.texto_autorizacion }}</span>
@@ -31,7 +31,7 @@ const modelo = defineModel({ type: Object, required: true })
     </label>
     <label v-if="esMenor" class="casilla">
       <input v-model="modelo.menorEscuchado" type="checkbox" />
-      <span>El acudiente declara que escuchó la opinión del menor antes de autorizar y la tuvo en cuenta.</span>
+      <span>El representante legal del menor (madre, padre, tutor o curador) declara que escuchó su opinión antes de otorgar esta autorización y que la tuvo en cuenta.</span>
     </label>
     <p class="politica">Texto completo: <RouterLink :to="`/politica-de-datos/${politica.version}`" target="_blank">política de tratamiento de datos</RouterLink>.</p>
   </fieldset>

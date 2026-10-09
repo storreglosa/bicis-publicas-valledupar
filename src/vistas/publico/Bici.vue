@@ -26,8 +26,8 @@ const valido = computed(() => new RegExp(`^${sitio.prefijoBici}-[0-9]{3,4}$`).te
         <div class="opcion">
           <h2>¿La encontraste sola o dañada?</h2>
           <p>Avísanos indicando el código <strong>{{ codigo }}</strong> y dónde está.</p>
-          <a v-if="sitio.contacto.pqrsdUrl" :href="sitio.contacto.pqrsdUrl" class="boton boton--secundario" rel="noopener">Avisar a la Secretaría</a>
-          <p v-else class="mensaje mensaje--aviso"><span>Canal de contacto por definir.</span></p>
+          <a :href="`mailto:${sitio.contacto.correo}?subject=${encodeURIComponent(`Bicicleta ${codigo}`)}`" class="boton boton--secundario">Avisar a la Secretaría</a>
+          <p class="nota">Se abre tu correo dirigido a {{ sitio.contacto.correo }}.</p>
         </div>
       </div>
     </template>
@@ -40,6 +40,7 @@ const valido = computed(() => new RegExp(`^${sitio.prefijoBici}-[0-9]{3,4}$`).te
 </template>
 
 <style scoped>
+.nota { color: var(--tinta-2); font-size: var(--texto-s); overflow-wrap: anywhere; }
 .pagina { padding-block: var(--esp-6); }
 .antetitulo { color: var(--secundario); font-weight: 650; text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--texto-s); margin-bottom: var(--esp-1); }
 .codigo { font-size: clamp(2.5rem, 12vw, 4rem); letter-spacing: 0.02em; }
