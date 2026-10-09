@@ -80,7 +80,7 @@ test('preinscripción de un menor: pide al representante legal y su declaración
   await page.getByLabel('Tipo de documento').first().selectOption('TI')   // aparece el bloque del acudiente
   await page.getByLabel('Edad', { exact: true }).fill('14')
   await expect(page.getByRole('group', { name: 'Representante legal del menor' })).toBeVisible()
-  await expect(page.getByText('Responder los datos del menor es voluntario')).toBeVisible()
+  await expect(page.getByText(/Responder los datos del menor \(los de la sección «Tus datos»\) es voluntario/)).toBeVisible()
   const acu = page.getByRole('group', { name: 'Representante legal del menor' })
   await acu.getByLabel('Parentesco').selectOption('madre')
   await acu.getByLabel('Número').fill('00900001')
