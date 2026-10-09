@@ -4,7 +4,9 @@
 # Datos en .pg_local/ (ignorado por git). Escucha solo por socket en .pg_local/ y en el puerto 54329.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
 DATOS="$RAIZ/.pg_local/datos"
 SOCKET="$RAIZ/.pg_local"
 PUERTO=54329

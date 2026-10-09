@@ -13,7 +13,9 @@
 # Registra el resultado con registrar_tarea('respaldo'): «Último respaldo» del tablero.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
 
 entorno="${1:-}"
 case "$entorno" in dev|prod) ;; *) echo "uso: BICIS_RESPALDO_GPG=<clave> $0 dev|prod" >&2; exit 2 ;; esac

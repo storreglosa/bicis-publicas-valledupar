@@ -15,7 +15,10 @@
 # aprueba); en prod se pide por teclado, sin eco, y no queda en el historial.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
-PSQL="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin/psql"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
+PSQL="$BIN/psql"
 CLI=(npx --yes supabase@2.117.0)
 
 entorno="${1:-}"

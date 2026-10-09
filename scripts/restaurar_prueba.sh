@@ -9,7 +9,9 @@
 # restaurada (tiene datos personales), salvo con --conservar.
 set -euo pipefail
 RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
 LOCAL="host=$RAIZ/.pg_local port=54329 user=postgres"
 BD=bicis_restauracion
 

@@ -8,7 +8,10 @@
 # 1. Prefer: tx=rollback NO debe revertir la bitácora de buscar_persona.
 # 2. Un error de validación por HTTP NO debe traer `details` ni `hint` (A-1).
 set -euo pipefail
-PSQL="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin/psql"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
+PSQL="$BIN/psql"
 
 entorno="${1:-}"; correo="${2:-}"
 case "$entorno" in dev|prod) ;; *) echo "uso: $0 dev|prod <correo>" >&2; exit 2 ;; esac

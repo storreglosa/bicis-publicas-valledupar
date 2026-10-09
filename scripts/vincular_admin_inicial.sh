@@ -9,7 +9,10 @@
 # Auto Confirm User) y tener el correo confirmado. Si ya hay administradores, no
 # hace nada: a partir de ahí se usa la app.
 set -euo pipefail
-PSQL="${CONDA_PREFIX:-$HOME/miniconda3/envs/bicis}/bin/psql"
+# PostgreSQL 17 del entorno conda «bicis» aunque la terminal esté en otro (p. ej. base):
+# pg_dump debe ser de la misma versión mayor que el servidor.
+BIN="$HOME/miniconda3/envs/bicis/bin"; [ -x "$BIN/psql" ] || BIN="${CONDA_PREFIX:-/usr}/bin"
+PSQL="$BIN/psql"
 
 entorno="${1:-}"; correo="${2:-}"; nombre="${3:-}"
 case "$entorno" in dev|prod) ;; *) echo "uso: $0 dev|prod <correo> \"<nombre>\" [--confirmar <ref>]" >&2; exit 2 ;; esac
