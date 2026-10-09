@@ -111,7 +111,10 @@ política publicada (nadie se puede inscribir), sin puntos ni bicis: la página 
 hasta el concepto de Jurídica (C4). 2026-10-09: Santiago publicó las Edge Functions con el widget real de
 Turnstile; comprobado: otro origen → 403, token falso → `verificacion_fallida` (secreto real, sin modo demo),
 purga sin clave → 401, purga por pg_cron → `ok`; tareas `purgar-fotos` y `purgar-preinscripciones` activas.
-Primer respaldo y simulacro de restauración hechos (§3).
+Primer respaldo y simulacro de restauración hechos (§3). Más tarde ese día, con el OK de Santiago: migraciones
+`20261009100000` y `20261009120000`, plazos 90 días / 24 meses (D-30) y código nuevo de las funciones (CORS con
+`x-region`, sin `remoteip`), subido sin tocar los secretos (`functions deploy` solo); verificado: preflight con
+`x-region`, token falso → `verificacion_fallida` desde `us-east-1`, purga sin clave → 401, superficie 14/14.
 Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
 Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 

@@ -135,3 +135,14 @@ test('demo pública: un documento que no empieza por 00 no se puede enviar', asy
   await expect(page.getByRole('button', { name: 'Inscribirme' })).toBeDisabled()
   expect(envios).toEqual([])
 })
+
+test('demo: la política muestra solo la versión vigente, sin historial', async ({ page }) => {
+  const version = (v, vigente) => ({ version: v, vigente_desde: '2026-10-0' + (vigente ? '9' : '7'), vigente, sha256: 'a'.repeat(64),
+    texto_md: `# Política ${v}\n\nTexto de la versión ${v}.` })
+  await page.route('**/rest/v1/politicas_tratamiento**', (r) => r.fulfill({ status: 200, contentType: 'application/json',
+    body: JSON.stringify([version('1.0', true), version('0.2', false)]) }))
+  await page.goto('#/politica-de-datos/0.2')                    // aun pidiendo la anterior por dirección
+  await expect(page.getByText('Versión 1.0 · vigente desde 2026-10-09')).toBeVisible()
+  await expect(page.getByText('Versiones anteriores')).toHaveCount(0)
+  await expect(page.getByText('Texto de la versión 0.2')).toHaveCount(0)
+})

@@ -1,18 +1,20 @@
 <script setup>
 // Política de tratamiento de datos: la vigente y el historial de versiones
 // (D. 1377/2013 art. 13). Las autorizaciones guardan la versión que aceptaron.
+// En la demo solo se muestra la vigente: las anteriores fueron borradores de prueba.
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useConsulta } from '../../composables/useConsulta.js'
 import { markdownSeguro } from '../../lib/markdown.js'
 
 const route = useRoute()
+const esDemo = import.meta.env.VITE_DEMO === '1'
 const { datos, cargando, error } = useConsulta((sb) =>
   sb.from('politicas_tratamiento').select('version,vigente_desde,texto_md,vigente,sha256').order('id', { ascending: false }))
 
 const versiones = computed(() => datos.value ?? [])
 const politica = computed(() =>
-  versiones.value.find((p) => p.version === route.params.version) ??
+  (esDemo ? null : versiones.value.find((p) => p.version === route.params.version)) ??
   versiones.value.find((p) => p.vigente) ?? null)
 </script>
 
@@ -33,7 +35,7 @@ const politica = computed(() =>
       <article class="politica" v-html="markdownSeguro(politica.texto_md)"></article>
       <p class="huella">Huella del texto (SHA-256): <code>{{ politica.sha256 }}</code></p>
 
-      <details v-if="versiones.length > 1" class="historial">
+      <details v-if="!esDemo && versiones.length > 1" class="historial">
         <summary>Versiones anteriores</summary>
         <ul>
           <li v-for="v in versiones" :key="v.version">
