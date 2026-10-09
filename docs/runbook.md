@@ -116,7 +116,8 @@ Primer respaldo y simulacro de restauración hechos (§3). Más tarde ese día, 
 `x-region`, sin `remoteip`), subido sin tocar los secretos (`functions deploy` solo); verificado: preflight con
 `x-region`, token falso → `verificacion_fallida` desde `us-east-1`, purga sin clave → 401, superficie 14/14. Después,
 también con su OK: migración `20261009150000` (eliminar puntos y eventos nunca usados, D-32); prod queda con las
-10 migraciones de dev, superficie 14/14, vacío (0 personas, 0 puntos, 0 eventos).
+10 migraciones de dev, superficie 14/14, vacío (0 personas, 0 puntos, 0 eventos). Con su OK, migración
+`20261009170000` (descripción del plazo de preinscripciones: «anonimiza»); prod = dev con 11 migraciones.
 Primer administrador de un proyecto: `scripts/vincular_admin_inicial.sh dev <correo> "<Nombre>"`.
 Datos de demostración (solo dev): `python scripts/sembrar_dev.py`.
 
