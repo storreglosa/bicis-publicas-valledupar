@@ -219,3 +219,19 @@ Actions con «Enable workflow»).
   `PROD_SUPABASE_URL` / `PROD_SUPABASE_PUBLISHABLE_KEY`, públicas por diseño). Se puede correr a mano desde
   Actions → Mantener activo → Run workflow.
 - `.github/dependabot.yml`: cada mes propone actualizar las acciones fijadas por SHA (pull request para revisar).
+
+## 6. Modo «Presentar» y video para reenviar
+El botón **▶ Presentar** del aviso DEMO abre `#/presentacion`: recorrido de unos 3 minutos con subtítulos para
+mostrar el sistema en reunión (Espacio pausa, ← → cambian de escena, Esc sale). Textos y tiempos en
+`src/presentacion/guion.js`; los clips (`public/presentacion/`) se graban con datos ficticios.
+
+Para regenerar los clips (tras cambiar pantallas que salen en ellos) y el video MP4:
+```bash
+npx vite build --mode development --outDir dist-demo
+npx vite preview --mode development --outDir dist-demo --port 4174      # en otra terminal
+node scripts/grabar_presentacion.mjs     # clips → public/presentacion/ (luego otro build)
+node scripts/grabar_video.mjs            # → capturas/presentacion.mp4 (1080p, ~181 s; fuera de git)
+```
+`grabar_video.mjs` informa el desfase entre la duración real y la del guion. Si supera ~1 s, el equipo
+estaba ocupado y los subtítulos se atrasan frente a los clips: cerrar otros programas y repetir. El video
+necesita ffmpeg con libx264 (entorno conda `video`, o la variable `FFMPEG`).

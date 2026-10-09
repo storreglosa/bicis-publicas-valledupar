@@ -43,6 +43,8 @@ scripts/migrar.sh dev [--aplicar]        # migraciones a Supabase (ver docs/runb
 python scripts/verificar_publicacion.py --historial   # ANTES de cada push (repo público)
 npx vite build --mode development --outDir dist-demo && npx vite preview --mode development --outDir dist-demo --port 4174
 node scripts/capturar.mjs <url> capturas/x.png "<selector>"   # captura esperando datos (Chromium en caché)
+node scripts/grabar_presentacion.mjs     # clips del modo «Presentar» (sobre el preview :4174; runbook §6)
+node scripts/grabar_video.mjs            # video MP4 de la presentación → capturas/ (fuera de git)
 scripts/desplegar_funciones.sh dev       # Edge Functions + secretos + pg_cron (exige `npx supabase@2.117.0 login`)
 BICIS_RESPALDO_GPG=<clave> scripts/respaldar_bd.sh prod   # respaldo cifrado fuera del repo (runbook §3)
 scripts/restaurar_prueba.sh <respaldo.tar.gpg>            # simulacro de restauración en el Postgres local

@@ -39,7 +39,9 @@ let cuadro = null
 let anterior = 0
 function avanzar(ahora) {
   if (fase.value === 'corriendo' && !pausado.value) {
-    t.value += Math.min(0.25, (ahora - anterior) / 1000)
+    // Tope de 1 s: si la pestaña se oculta, la presentación queda en pausa; con el equipo
+    // cargado (cuadros de 0,3–0,9 s) sigue al reloj y no se atrasa frente a los clips.
+    t.value += Math.min(1, (ahora - anterior) / 1000)
     if (t.value >= escena.value.duracion) irA(indice.value + 1)
   }
   anterior = ahora
