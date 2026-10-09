@@ -270,6 +270,7 @@ h3 { font-size: 1.35em; margin: 0.3em 0; }
 .contador--cambio .contador__valor { animation: late 0.9s ease; }
 
 .lienzo--qr { flex-wrap: wrap; align-content: center; }
+.lienzo--qr .telefono { height: min(54vh, 40vw); }
 .sticker { background: var(--superficie); border: 3px solid #221c17; border-radius: 1.2em; padding: 1.4em; display: grid; justify-items: center; gap: 0.6em; box-shadow: 0 1.2em 3em rgba(34, 28, 23, 0.2); }
 .sticker__qr { width: min(30vh, 22vw); aspect-ratio: 1; }
 .sticker__qr :deep(svg) { width: 100%; height: 100%; display: block; }

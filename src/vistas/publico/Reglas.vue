@@ -34,6 +34,9 @@ const grupos = computed(() => {
   return [...porCategoria.entries()]
 })
 
+// Rótulo para el ciudadano: la descripción de este parámetro explica al administrador qué hace cada valor.
+const rotulo = (p) => (p.clave === 'evidencia.foto_persona_obligatoria' ? 'Foto de evidencia' : p.descripcion)
+
 const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 'sanciones.texto_reglamento' && p.valor))
 </script>
 
@@ -52,7 +55,7 @@ const reglamento = computed(() => (datos.value ?? []).find((p) => p.clave === 's
         <h2>{{ categoria }}</h2>
         <dl>
           <template v-for="p in parametros" :key="p.clave">
-            <dt>{{ p.descripcion }}</dt>
+            <dt>{{ rotulo(p) }}</dt>
             <dd>{{ formatear(p) }}</dd>
           </template>
         </dl>

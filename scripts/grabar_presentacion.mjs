@@ -8,7 +8,7 @@
 // Ciudadano: páginas públicas reales de la demo (dev). Operador y Secretaría: servidor
 // simulado con datos ficticios (documentos 00…), para que el clip sea siempre igual.
 import { chromium } from '@playwright/test'
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -44,7 +44,8 @@ async function clip(nombre, ancho, alto, guion) {
   await guion(pagina, () => { inicios[nombre] = Math.max(0, (Date.now() - comienzo) / 1000 - 0.3) })
   const video = pagina.video()
   await contexto.close()
-  renameSync(await video.path(), join(DESTINO, `${nombre}.webm`))
+  await video.saveAs(join(DESTINO, `${nombre}.webm`))   // /tmp puede estar en otro sistema de archivos
+  await video.delete()
   console.log(`clip ${nombre}: listo (empieza en ${inicios[nombre]?.toFixed(1)} s)`)
 }
 
@@ -181,7 +182,8 @@ await clip('ciudadano', 390, 844, async (p, marcar) => {
   await p.getByRole('banner').getByRole('link', { name: 'Eventos' }).click(); await espera(3500)
   await p.getByRole('banner').getByRole('link', { name: 'Reglas' }).click(); await espera(2500)
   await p.mouse.wheel(0, 600); await espera(2000)
-  await p.getByRole('banner').getByRole('link', { name: 'Inscribirme' }).click(); await espera(3500)
+  await p.getByRole('banner').getByRole('link', { name: 'Inscribirme' }).click()
+  await p.getByRole('heading', { name: 'Tus datos' }).waitFor(); await espera(3000)
 })
 
 // Página de la bici (para la escena del QR)
