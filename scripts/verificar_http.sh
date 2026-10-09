@@ -21,20 +21,31 @@ case "$entorno" in
   prod) clave_publica="sb_publishable_lFBmdb53ut_MMPai4UlYgg_Tp4uAfp-" ;;
 esac
 
-read -r -s -p "Clave de $correo en $entorno (no se muestra): " clave
-echo
-token="$(python3 - "$url" "$clave_publica" "$correo" "$clave" <<'PY'
-import json, sys, urllib.request
+# Hasta 3 intentos. IFS= conserva espacios al inicio o al final de la clave.
+for intento in 1 2 3; do
+  IFS= read -r -s -p "Clave de $correo en $entorno (no se muestra; intento $intento de 3): " clave
+  echo
+  if token="$(python3 - "$url" "$clave_publica" "$correo" "$clave" <<'PY'
+import json, sys, urllib.error, urllib.request
 url, apikey, correo, clave = sys.argv[1:]
 pet = urllib.request.Request(f"{url}/auth/v1/token?grant_type=password", method="POST",
     data=json.dumps({"email": correo, "password": clave}).encode(),
     headers={"apikey": apikey, "content-type": "application/json"})
 try:
     print(json.load(urllib.request.urlopen(pet))["access_token"])
-except Exception as e:
-    sys.exit(f"No se pudo iniciar sesión ({getattr(e, 'code', e)}).")
+except urllib.error.HTTPError as e:
+    try:
+        cuerpo = json.load(e)
+        motivo = f"{cuerpo.get('error_code') or cuerpo.get('error')}: {cuerpo.get('msg') or cuerpo.get('error_description')}"
+    except Exception:
+        motivo = "sin detalle"
+    sys.exit(f"No se pudo iniciar sesión (HTTP {e.code}, {motivo}).")
 PY
-)"
+)"; then break; fi
+  token=""
+  echo "   (invalid_credentials = el correo o la clave no coinciden; usa la clave con la que entras a «Módulo operación»)"
+done
+[ -n "$token" ] || exit 1
 unset clave
 trap 'curl -s -o /dev/null -X POST "$url/auth/v1/logout" -H "apikey: $clave_publica" -H "authorization: Bearer $token"' EXIT
 
